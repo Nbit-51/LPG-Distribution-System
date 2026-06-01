@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bookings -- LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Bookings</div>
+        <div class="page-sub">Track and manage cylinder bookings</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap">
+        <select id="filter-status" onchange="loadBookings()" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="allocated">Allocated</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Consumer</th><th>Type</th><th>Cylinders</th><th>Agency</th><th>Status</th><th>Booked Date</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="bookings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- View/Edit Modal -->
+<div id="booking-modal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:10px;padding:28px;width:480px;max-width:95%;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:18px;font-weight:700;" id="modal-title">Booking Details</h2>
+      <button onclick="closeBookingModal()" style="background:none;border:none;font-size:22px;cursor:pointer;">&times;</button>
+    </div>
+    <div id="modal-body" style="margin-bottom:20px;"></div>
+    
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;">ASSIGN DELIVERY AGENT</label>
+      <select id="assign-agent" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;background:#fff;color:#333;">
+        <option value="">-- No Agent Assigned --</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;">UPDATE STATUS</label>
+      <select id="new-status" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;background:#fff;color:#333;">
+        <option value="pending">Pending</option>
+        <option value="allocated">Allocated</option>
+        <option value="delivered">Delivered</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeBookingModal()" style="padding:9px 18px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;">Cancel</button>
+      <button onclick="updateStatus()" style="padding:9px 18px;border:none;border-radius:6px;background:#f97316;color:#fff;font-weight:600;cursor:pointer;">Update Status</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+requireAuth();
+renderSidebar('bookings');
+
+let currentBookingId = null;
+
+async function loadBookings() {
+  try {
+    const status = document.getElementById('filter-status').value;
+    const url = '/bookings' + (status ? '?status=' + status : '');
+    const data = await api.get(url);
+    const bookings = data.results || [];
+    const tbody = document.getElementById('bookings-tbody');
+    tbody.innerHTML = bookings.length ? bookings.map(b => `<tr>
+      <td>#${b.booking_id}</td>
+      <td>${b.consumer_name}</td>
+      <td>${badge(b.consumer_type)}</td>
+      <td>${b.cylinders_requested}</td>
+      <td>${b.agency_name || '&mdash;'}</td>
+      <td>${badge(b.status)}</td>
+      <td>${fmtDate(b.created_at)}</td>
+      <td><button class="btn btn-sm btn-secondary" onclick="viewBooking(${JSON.stringify(b).replace(/"/g, '&quot;')})">View</button></td>
+    </tr>`).join('') : emptyRow('No bookings');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function viewBooking(b) {
+  currentBookingId = b.booking_id;
+  document.getElementById('modal-title').textContent = 'Booking #' + b.booking_id;
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><div style="font-size:11px;color:#64748b;font-weight:600;">CONSUMER</div><div style="font-weight:600;">${b.consumer_name}</div></div>
+      <div><div style="font-size:11px;color:#64748b;font-weight:600;">TYPE</div><div>${b.consumer_type}</div></div>
+      <div><div style="font-size:11px;color:#64748b;font-weight:600;">CYLINDERS</div><div>${b.cylinders_requested}</div></div>
+      <div><div style="font-size:11px;color:#64748b;font-weight:600;">AGENCY</div><div>${b.agency_name || '&mdash;'}</div></div>
+      <div><div style="font-size:11px;color:#64748b;font-weight:600;">BOOKED DATE</div><div>${fmtDate(b.booking_date)}</div></div>
+      <div><div style="font-size:11px;color:#64748b;font-weight:600;">CURRENT STATUS</div><div>${badge(b.status)}</div></div>
+    </div>`;
+  document.getElementById('new-status').value = b.status;
+  
+  // Load agents for this agency
+  var agentSelect = document.getElementById('assign-agent');
+  agentSelect.innerHTML = '<option value="">Loading agents...</option>';
+  try {
+    var agents = await api.get('/admin/delivery-agents?agency_id=' + b.agency_id);
+    agentSelect.innerHTML = '<option value="">-- No Agent Assigned --</option>' + 
+      agents.map(a => `<option value="${a.agent_id}">${a.full_name} (${a.phone})</option>`).join('');
+    agentSelect.value = b.agent_id || "";
+  } catch(e) {
+    agentSelect.innerHTML = '<option value="">Error loading agents</option>';
+  }
+  
+  document.getElementById('booking-modal').style.display = 'flex';
+}
+
+function closeBookingModal() {
+  document.getElementById('booking-modal').style.display = 'none';
+  currentBookingId = null;
+}
+
+async function updateStatus() {
+  if (!currentBookingId) return;
+  const status = document.getElementById('new-status').value;
+  const agentIdVal = document.getElementById('assign-agent').value;
+  const agentId = agentIdVal ? parseInt(agentIdVal) : null;
+  try {
+    await api.patch('/bookings/' + currentBookingId + '/status', { status });
+    await api.post('/admin/bookings/' + currentBookingId + '/assign?agent_id=' + (agentId || ''));
+    toast('Booking details updated successfully.', 'success');
+    closeBookingModal();
+    loadBookings();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+loadBookings();
+</script>
+</body>
+</html>

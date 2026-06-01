@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allocation Lab - LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  .lab-band { background:#111827; border:1px solid #334155; border-radius:8px; padding:16px; margin-bottom:18px; }
+  .lab-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; }
+  .lab-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px; }
+  .lab-table-wrap { max-height:520px; overflow:auto; border:1px solid #334155; border-radius:8px; }
+  .lab-table { min-width:1060px; }
+  .lab-table thead th { position:sticky; top:0; z-index:2; background:#0f172a; }
+  .lab-row-num { color:#64748b; font-weight:800; }
+  .lab-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin:18px 0; }
+  .lab-metric { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:14px; }
+  .lab-metric-label { font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:800; }
+  .lab-metric-value { font-size:22px; font-weight:900; color:#f8fafc; margin-top:4px; }
+  .lab-result-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:16px; }
+  .lab-result-panel { background:#111827; border:1px solid #334155; border-radius:8px; padding:16px; }
+  .lab-result-panel.smart { border-color:#f97316; box-shadow:0 0 0 1px rgba(249,115,22,0.15); }
+  .lab-input-small { padding:7px 8px; font-size:13px; }
+  .lab-note { color:#94a3b8; font-size:13px; line-height:1.45; }
+  .lab-verdict { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:14px; margin-top:16px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Allocation Lab</h1>
+        <p class="page-subtitle">Large testing playground for FCFS vs Smart Priority allocation</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" onclick="loadAgenciesAndStock()"><i class="ti ti-refresh"></i> Refresh Agencies</button>
+        <button class="btn btn-primary" onclick="runLabSimulation()"><i class="ti ti-player-play"></i> Run Comparison</button>
+      </div>
+    </div>
+
+    <div class="lab-band">
+      <div class="lab-controls">
+        <div class="form-group">
+          <label>Agency from system data</label>
+          <select id="lab-agency" onchange="applyAgencyStock()">
+            <option value="">Standalone test</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Available cylinders for this test</label>
+          <input type="number" id="lab-stock" min="0" value="8" oninput="updateLabInputSummary()">
+        </div>
+        <div class="form-group">
+          <label>Simulation mode</label>
+          <label style="display:flex; align-items:center; gap:8px; height:42px; margin:0; cursor:pointer;">
+            <input type="checkbox" id="lab-crisis" style="width:18px; height:18px; accent-color:#f97316;"> Crisis rules active
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Bulk rows</label>
+          <input type="number" id="lab-bulk-count" min="1" max="100" value="20">
+        </div>
+      </div>
+      <div class="lab-actions">
+        <button class="btn btn-outline" onclick="loadFiveVsSix()"><i class="ti ti-presentation"></i> Load 5 vs 6</button>
+        <button class="btn btn-outline" onclick="loadCrisisLab()"><i class="ti ti-alert-triangle"></i> Crisis Test</button>
+        <button class="btn btn-outline" onclick="generateWideLab()"><i class="ti ti-database-plus"></i> Generate Wide Dataset</button>
+        <button class="btn btn-outline" onclick="addLabRow()"><i class="ti ti-user-plus"></i> Add Customer</button>
+        <button class="btn btn-danger" onclick="clearLabRows()"><i class="ti ti-trash"></i> Clear</button>
+      </div>
+      <div class="lab-note" style="margin-top:12px;">
+        This page is a simulator only. It sends custom test rows to the comparison API and does not create bookings, change agency stock, or write allocation history.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div>
+          <h3 class="card-title" style="margin-bottom:4px;">Customer Demand Dataset</h3>
+          <span class="card-subtitle" id="lab-input-summary">0 customers, 0 cylinders demanded</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addLabRow()" style="background:#f97316;"><i class="ti ti-plus"></i> Add Customer</button>
+      </div>
+      <div class="lab-table-wrap">
+        <table class="table lab-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer Name</th>
+              <th>Customer Type</th>
+              <th>Cylinders Needed</th>
+              <th>Booking Date</th>
+              <th>Waiting Days</th>
+              <th>Test Note</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="lab-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="lab-results" style="display:none;">
+      <div class="lab-summary-grid">
+        <div class="lab-metric"><div class="lab-metric-label">Smart Served</div><div class="lab-metric-value" id="lab-smart-served">0</div></div>
+        <div class="lab-metric"><div class="lab-metric-label">FCFS Served</div><div class="lab-metric-value" id="lab-fcfs-served">0</div></div>
+        <div class="lab-metric"><div class="lab-metric-label">Domestic Protected</div><div class="lab-metric-value" id="lab-domestic-protected">0</div></div>
+        <div class="lab-metric"><div class="lab-metric-label">Idle Stock Saved</div><div class="lab-metric-value" id="lab-idle-saved">0</div></div>
+        <div class="lab-metric"><div class="lab-metric-label">Backlog Reduced</div><div class="lab-metric-value" id="lab-backlog-reduced">0</div></div>
+      </div>
+
+      <div class="lab-result-grid">
+        <div class="lab-result-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 class="card-title" style="margin:0;">FCFS Result</h3>
+            <span class="badge badge-pending">first come first served</span>
+          </div>
+          <div class="lab-note" id="lab-fcfs-note"></div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table class="table">
+              <thead><tr><th>Customer</th><th>Type</th><th>Requested</th><th>Allocated</th><th>Outcome</th></tr></thead>
+              <tbody id="lab-fcfs-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="lab-result-panel smart">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 class="card-title" style="margin:0; color:#fb923c;">Smart Priority Result</h3>
+            <span class="badge badge-commercial">priority + split</span>
+          </div>
+          <div class="lab-note" id="lab-smart-note"></div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table class="table">
+              <thead><tr><th>Customer</th><th>Type</th><th>Requested</th><th>Allocated</th><th>Outcome</th></tr></thead>
+              <tbody id="lab-smart-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="lab-verdict" id="lab-verdict"></div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+let labRowId = 0;
+let labStocks = [];
+
+if (!requireAuth()) {}
+else {
+  renderSidebar('allocation-lab');
+  loadAgenciesAndStock();
+  loadFiveVsSix(false);
+}
+
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+async function loadAgenciesAndStock() {
+  try {
+    const results = await Promise.all([
+      api.get('/agencies/?page_size=100').catch(() => ({ results: [] })),
+      api.get('/admin/overview').catch(() => ({ stock_summary: [] }))
+    ]);
+    const agencies = results[0].results || [];
+    labStocks = results[1].stock_summary || [];
+    document.getElementById('lab-agency').innerHTML =
+      '<option value="">Standalone test</option>' +
+      agencies.map(a => `<option value="${a.agency_id}">${esc(a.agency_name || 'Agency #' + a.agency_id)}</option>`).join('');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+function applyAgencyStock() {
+  const agencyId = document.getElementById('lab-agency').value;
+  if (!agencyId) return updateLabInputSummary();
+  const stock = labStocks.find(s => String(s.agency_id || '') === String(agencyId));
+  if (stock) {
+    document.getElementById('lab-stock').value = stock.available_cylinders || stock.cylinders_available || 0;
+    toast('Agency stock loaded into test input', 'success');
+  }
+  updateLabInputSummary();
+}
+
+function addLabRow(data = {}) {
+  labRowId += 1;
+  const row = document.createElement('tr');
+  row.id = `lab-row-${labRowId}`;
+  const type = data.type || 'domestic';
+  row.innerHTML = `
+    <td class="lab-row-num">${labRowId}</td>
+    <td><input class="lab-name lab-input-small" value="${esc(data.name || '')}" placeholder="Customer name"></td>
+    <td>
+      <select class="lab-type lab-input-small">
+        <option value="domestic" ${type === 'domestic' ? 'selected' : ''}>Domestic</option>
+        <option value="essential" ${type === 'essential' ? 'selected' : ''}>Essential</option>
+        <option value="commercial" ${type === 'commercial' ? 'selected' : ''}>Commercial</option>
+      </select>
+    </td>
+    <td><input type="number" min="1" class="lab-qty lab-input-small" value="${data.qty || 1}"></td>
+    <td><input type="date" class="lab-date lab-input-small" value="${data.date || '2026-05-26'}"></td>
+    <td><input type="number" min="0" class="lab-days lab-input-small" value="${data.days || 0}"></td>
+    <td><input class="lab-note-input lab-input-small" value="${esc(data.note || '')}" placeholder="Optional note"></td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteLabRow(${labRowId})"><i class="ti ti-trash"></i></button></td>
+  `;
+  document.getElementById('lab-body').appendChild(row);
+  row.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', updateLabInputSummary);
+    el.addEventListener('change', updateLabInputSummary);
+  });
+  updateLabInputSummary();
+}
+
+function deleteLabRow(id) {
+  document.getElementById(`lab-row-${id}`)?.remove();
+  renumberLabRows();
+  updateLabInputSummary();
+}
+
+function renumberLabRows() {
+  document.querySelectorAll('#lab-body tr').forEach((row, index) => {
+    row.querySelector('.lab-row-num').textContent = index + 1;
+  });
+}
+
+function clearLabRows() {
+  document.getElementById('lab-body').innerHTML = '';
+  document.getElementById('lab-results').style.display = 'none';
+  labRowId = 0;
+  updateLabInputSummary();
+}
+
+function loadFiveVsSix(showToast = true) {
+  clearLabRows();
+  document.getElementById('lab-stock').value = 8;
+  document.getElementById('lab-crisis').checked = false;
+  addLabRow({ name:'Domestic Household Order', type:'domestic', qty:5, date:'2026-05-26', days:1, note:'Protected household demand' });
+  addLabRow({ name:'Commercial Bulk Order', type:'commercial', qty:6, date:'2026-05-25', days:2, note:'Older FCFS request' });
+  if (showToast) toast('5 vs 6 test loaded', 'success');
+}
+
+function loadCrisisLab() {
+  clearLabRows();
+  document.getElementById('lab-stock').value = 12;
+  document.getElementById('lab-crisis').checked = true;
+  [
+    { name:'Anita Home', type:'domestic', qty:3, date:'2026-05-26', days:1 },
+    { name:'Ravi Home', type:'domestic', qty:2, date:'2026-05-24', days:3 },
+    { name:'City Clinic', type:'essential', qty:5, date:'2026-05-23', days:4 },
+    { name:'Hotel Grand', type:'commercial', qty:7, date:'2026-05-21', days:6 },
+    { name:'Spice Restaurant', type:'commercial', qty:5, date:'2026-05-20', days:7 }
+  ].forEach(addLabRow);
+  toast('Crisis test loaded', 'success');
+}
+
+function generateWideLab() {
+  clearLabRows();
+  const count = Math.max(1, Math.min(100, parseInt(document.getElementById('lab-bulk-count').value) || 20));
+  const types = ['domestic', 'domestic', 'essential', 'commercial'];
+  for (let i = 0; i < count; i++) {
+    const type = types[i % types.length];
+    const qty = type === 'domestic' ? 1 + (i % 5) : type === 'essential' ? 2 + (i % 6) : 3 + (i % 9);
+    const day = String(Math.max(1, 26 - (i % 18))).padStart(2, '0');
+    const prefix = type === 'domestic' ? 'Household' : type === 'essential' ? 'Essential Unit' : 'Commercial Outlet';
+    addLabRow({ name:`${prefix} ${i + 1}`, type, qty, date:`2026-05-${day}`, days:i % 21 });
+  }
+  document.getElementById('lab-stock').value = Math.max(8, Math.round(count * 2.2));
+  updateLabInputSummary();
+  toast('Wide dataset generated', 'success');
+}
+
+function updateLabInputSummary() {
+  const rows = [...document.querySelectorAll('#lab-body tr')];
+  let demand = 0;
+  const counts = { domestic:0, essential:0, commercial:0 };
+  rows.forEach(row => {
+    const type = row.querySelector('.lab-type').value;
+    const qty = Math.max(1, parseInt(row.querySelector('.lab-qty').value) || 1);
+    demand += qty;
+    counts[type] += 1;
+  });
+  const stock = Math.max(0, parseInt(document.getElementById('lab-stock').value) || 0);
+  const gap = demand - stock;
+  document.getElementById('lab-input-summary').textContent =
+    `${rows.length} customers, ${demand} cylinders demanded, ${stock} available, ${gap > 0 ? gap + ' shortage' : Math.abs(gap) + ' surplus'} | ${counts.domestic} domestic, ${counts.essential} essential, ${counts.commercial} commercial`;
+}
+
+function collectLabBookings() {
+  return [...document.querySelectorAll('#lab-body tr')].map((row, index) => ({
+    booking_id: index + 1,
+    consumer_name: row.querySelector('.lab-name').value.trim() || `Customer ${index + 1}`,
+    consumer_type: row.querySelector('.lab-type').value,
+    cylinders_requested: Math.max(1, parseInt(row.querySelector('.lab-qty').value) || 1),
+    booking_date: row.querySelector('.lab-date').value || '2026-05-26',
+    waiting_days: Math.max(0, parseInt(row.querySelector('.lab-days').value) || 0)
+  }));
+}
+
+async function runLabSimulation() {
+  const bookings = collectLabBookings();
+  if (!bookings.length) return toast('Add at least one customer row.', 'error');
+  try {
+    const result = await api.post('/allocation/simulate', {
+      available_stock: Math.max(0, parseInt(document.getElementById('lab-stock').value) || 0),
+      crisis_mode: document.getElementById('lab-crisis').checked,
+      bookings
+    });
+    renderLabResult(result);
+    toast('Comparison complete', 'success');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+function renderRows(items, allocatedItems) {
+  const allocatedIds = new Set(allocatedItems.map(x => x.booking_id));
+  return items.map(item => {
+    const allocated = allocatedIds.has(item.booking_id);
+    const qty = item.allocated_qty == null ? 0 : item.allocated_qty;
+    const status = allocated ? `<span class="badge badge-allocated">Allocated</span>` : `<span class="badge badge-cancelled">Skipped</span>`;
+    return `<tr>
+      <td>${esc(item.consumer_name)}</td>
+      <td>${badge(item.consumer_type)}</td>
+      <td>${item.requested_qty}</td>
+      <td>${qty}</td>
+      <td>${status}<div class="lab-note">${esc(item.reason || '')}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLabResult(result) {
+  const summary = result.summary || {};
+  const fcfsAll = [...result.fcfs.allocated, ...result.fcfs.skipped];
+  const smartAll = [...result.smart.allocated, ...result.smart.skipped];
+  document.getElementById('lab-results').style.display = 'block';
+  document.getElementById('lab-smart-served').textContent = summary.smart_allocated_qty || 0;
+  document.getElementById('lab-fcfs-served').textContent = summary.fcfs_allocated_qty || 0;
+  document.getElementById('lab-domestic-protected').textContent = `${summary.smart_domestic_qty || 0} vs ${summary.fcfs_domestic_qty || 0}`;
+  document.getElementById('lab-idle-saved').textContent = Math.max(0, summary.smart_idle_saved_qty || 0);
+  document.getElementById('lab-backlog-reduced').textContent = Math.max(0, (summary.fcfs_unserved_qty || 0) - (summary.smart_unserved_qty || 0));
+  document.getElementById('lab-fcfs-note').textContent = `Allocated ${result.fcfs.allocated_qty || 0} cylinder(s), left ${result.fcfs.remaining_stock || 0} idle, skipped ${result.fcfs.skipped.length} request(s).`;
+  document.getElementById('lab-smart-note').textContent = `Allocated ${result.smart.allocated_qty || 0} cylinder(s), left ${result.smart.remaining_stock || 0} idle, skipped ${result.smart.skipped.length} request(s).`;
+  document.getElementById('lab-fcfs-body').innerHTML = renderRows(fcfsAll, result.fcfs.allocated);
+  document.getElementById('lab-smart-body').innerHTML = renderRows(smartAll, result.smart.allocated);
+
+  const smartBetter = (summary.smart_allocated_qty || 0) > (summary.fcfs_allocated_qty || 0) || (summary.smart_domestic_qty || 0) > (summary.fcfs_domestic_qty || 0);
+  document.getElementById('lab-verdict').innerHTML = smartBetter
+    ? `<strong style="color:#22c55e;">Smart Priority is stronger for this test.</strong><div class="lab-note" style="margin-top:4px;">It serves more useful demand and/or protects higher-priority consumers while reducing idle stock.</div>`
+    : `<strong style="color:#f59e0b;">This test does not show a Smart Priority advantage.</strong><div class="lab-note" style="margin-top:4px;">Change stock, dates, crisis mode, or customer mix to test a wider condition.</div>`;
+}
+</script>
+</body>
+</html>

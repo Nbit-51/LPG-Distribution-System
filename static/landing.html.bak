@@ -1,0 +1,277 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LPG Distribution System</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f4f6f9;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a202c;
+  }
+  .header p {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 6px;
+  }
+  .cards {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    width: 340px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08);
+    overflow: hidden;
+  }
+  .card-top {
+    background: #3b5bdb;
+    padding: 22px 24px;
+    color: #fff;
+  }
+  .card-top.admin { background: #1a202c; }
+  .card-top h2 { font-size: 17px; font-weight: 700; }
+  .card-top p { font-size: 13px; opacity: .75; margin-top: 4px; }
+  .card-body { padding: 24px; }
+  .form-group { margin-bottom: 14px; }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 5px;
+  }
+  input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1a202c;
+    outline: none;
+    transition: border-color .15s;
+    background: #fff;
+  }
+  input:focus { border-color: #3b5bdb; box-shadow: 0 0 0 3px rgba(59,91,219,.1); }
+  .btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-admin { background: #1a202c; color: #fff; }
+  .btn-admin:hover { background: #2d3748; }
+  .btn-consumer { background: #3b5bdb; color: #fff; }
+  .btn-consumer:hover { background: #2f4ac5; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+  .err {
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .divider { text-align: center; font-size: 12px; color: #94a3b8; margin: 14px 0; }
+  .register-link {
+    display: block;
+    text-align: center;
+    font-size: 13px;
+    color: #3b5bdb;
+    text-decoration: none;
+    margin-top: 12px;
+  }
+  .register-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LPG Distribution System</h1>
+  <p>Priority-based cylinder allocation and delivery management</p>
+</div>
+
+<div class="cards">
+  <!-- ADMIN -->
+  <div class="card">
+    <div class="card-top admin">
+      <h2>Admin Portal</h2>
+      <p>Manage agencies, consumers, allocations and supply</p>
+    </div>
+    <div class="card-body">
+      <div class="err" id="admin-err"></div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="admin-user" placeholder="Enter username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="admin-pass" placeholder="Enter password"
+          onkeydown="if(event.key==='Enter') adminLogin()">
+      </div>
+      <button class="btn btn-admin" onclick="adminLogin()" id="admin-btn">Sign In as Admin</button>
+    </div>
+  </div>
+
+  <!-- CONSUMER -->
+  <div class="card">
+    <div class="card-top">
+      <h2>Consumer Portal</h2>
+      <p>Book cylinders, track deliveries, view QR codes</p>
+    </div>
+    <div class="card-body">
+      <div class="err" id="con-err"></div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="con-phone" placeholder="10-digit phone number">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="con-pass" placeholder="Your password"
+          onkeydown="if(event.key==='Enter') consumerLogin()">
+      </div>
+      <button class="btn btn-consumer" onclick="consumerLogin()" id="con-btn">Sign In as Consumer</button>
+      <div class="divider">â€” New here? â€”</div>
+      <a href="/consumer-portal#register" class="register-link">Create a Consumer Account</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideErr(id) { document.getElementById(id).style.display = 'none'; }
+
+async function adminLogin() {
+  hideErr('admin-err');
+  const username = document.getElementById('admin-user').value.trim();
+  const password = document.getElementById('admin-pass').value;
+  if (!username || !password) { showErr('admin-err', 'Enter username and password.'); return; }
+  const btn = document.getElementById('admin-btn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = typeof data.detail === 'string' ? data.detail :
+        Array.isArray(data.detail) ? data.detail[0]?.msg : ('Error ' + res.status);
+      showErr('admin-err', msg); return;
+    }
+    localStorage.setItem('lpg_token', data.access_token);
+    localStorage.setItem('lpg_user', JSON.stringify(data));
+    window.location.href = '/dashboard';
+  } catch(e) {
+    showErr('admin-err', 'Connection error. Is the server running?');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In as Admin';
+  }
+}
+
+async function consumerLogin() {
+  hideErr('con-err');
+  const phone = document.getElementById('con-phone').value.trim();
+  const password = document.getElementById('con-pass').value;
+  if (!phone || !password) { showErr('con-err', 'Enter phone number and password.'); return; }
+  const btn = document.getElementById('con-btn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const res = await fetch('/auth/consumer/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = typeof data.detail === 'string' ? data.detail :
+        Array.isArray(data.detail) ? data.detail[0]?.msg : ('Error ' + res.status);
+      showErr('con-err', msg); return;
+    }
+    localStorage.setItem('consumer_token', data.access_token);
+    localStorage.setItem('consumer_user', JSON.stringify(data));
+    window.location.href = '/consumer-portal';
+  } catch(e) {
+    showErr('con-err', 'Connection error. Is the server running?');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In as Consumer';
+  }
+}
+
+// Auto-redirect if already logged in — verify token is still valid
+async function checkAndRedirect() {
+  const token = localStorage.getItem('lpg_token');
+  const consumerToken = localStorage.getItem('consumer_token');
+  if (token) {
+    try {
+      const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) { window.location.href = '/dashboard'; return; }
+      else localStorage.removeItem('lpg_token');
+    } catch(e) { localStorage.removeItem('lpg_token'); }
+  }
+  if (consumerToken) {
+    try {
+      const res = await fetch('/auth/consumer/me', { headers: { 'Authorization': 'Bearer ' + consumerToken } });
+      if (res.ok) { window.location.href = '/consumer-portal'; return; }
+      else localStorage.removeItem('consumer_token');
+    } catch(e) { localStorage.removeItem('consumer_token'); }
+  }
+}
+async function checkAndRedirect() {
+  const token = localStorage.getItem('lpg_token');
+  const consumerToken = localStorage.getItem('consumer_token');
+  if (token) {
+    try {
+      const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) { window.location.href = '/dashboard'; return; }
+      else localStorage.removeItem('lpg_token');
+    } catch(e) { localStorage.removeItem('lpg_token'); }
+  }
+  if (consumerToken) {
+    try {
+      const res = await fetch('/auth/consumer/me', { headers: { 'Authorization': 'Bearer ' + consumerToken } });
+      if (res.ok) { window.location.href = '/consumer-portal'; return; }
+      else localStorage.removeItem('consumer_token');
+    } catch(e) { localStorage.removeItem('consumer_token'); }
+  }
+}
+checkAndRedirect();
+</script>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LPG System — Register</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f;
+      --surface: #0e0e1c;
+      --border: rgba(255,255,255,0.07);
+      --text: #ddddf0;
+      --muted: rgba(221,221,240,0.35);
+      --consumer: #14b8a6;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      color: var(--text);
+    }
+    .blob1 {
+      position: fixed; top: -200px; left: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(20,184,166,0.06) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .blob2 {
+      position: fixed; bottom: -200px; right: -200px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(20,184,166,0.05) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .wrapper {
+      width: 100%; max-width: 460px;
+      animation: rise 0.45s cubic-bezier(0.34,1.3,0.64,1) both;
+      z-index: 10;
+    }
+    @keyframes rise {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 24px; justify-content: center;
+    }
+    .brand-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: var(--consumer);
+      display: grid; place-items: center;
+      box-shadow: 0 0 22px rgba(20,184,166,0.25);
+    }
+    .brand-name { font-size: 17px; font-weight: 600; color: var(--text); }
+    .brand-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+    .card-glow {
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(20,184,166,0.6), transparent);
+    }
+    .card-head {
+      padding: 22px 26px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(20,184,166,0.05);
+    }
+    .card-head-title {
+      font-size: 16px; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: 9px; margin-bottom: 3px;
+    }
+    .card-head-title i { font-size: 18px; color: #5eead4; }
+    .card-head-desc { font-size: 12px; color: var(--muted); }
+    .card-body { padding: 22px 26px 24px; }
+    
+    .msg { min-height: 34px; margin-bottom: 12px; display: none; }
+    .msg-error, .msg-success {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 12px; border-radius: 8px; font-size: 12.5px;
+      animation: fadeIn 0.2s ease;
+    }
+    .msg-error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2);  color: #f87171; }
+    .msg-success { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2); color: #34d399; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; } }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 400px) {
+      .form-row { grid-template-columns: 1fr; }
+    }
+    .field { margin-bottom: 14px; }
+    label {
+      display: block; font-size: 10px; font-weight: 600;
+      letter-spacing: 0.09em; text-transform: uppercase;
+      color: rgba(221,221,240,0.28); margin-bottom: 7px;
+      font-family: 'DM Mono', monospace;
+    }
+    .input-wrap { position: relative; }
+    .input-wrap i {
+      position: absolute; left: 13px; top: 50%;
+      transform: translateY(-50%); font-size: 15px;
+      color: rgba(221,221,240,0.2); pointer-events: none;
+      transition: color 0.2s;
+    }
+    .input-wrap:focus-within i { color: rgba(221,221,240,0.5); }
+    input, select, textarea {
+      width: 100%; padding: 11px 13px 11px 40px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; font-size: 13.5px;
+      font-family: 'DM Sans', sans-serif; color: var(--text);
+      outline: none; transition: border-color 0.2s, background 0.2s;
+    }
+    textarea {
+      padding-left: 14px;
+      resize: vertical;
+    }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+    select option {
+      background: #0e0e1c;
+      color: var(--text);
+    }
+    input::placeholder, textarea::placeholder { color: rgba(221,221,240,0.18); }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(20,184,166,0.5);
+      background: rgba(20,184,166,0.05);
+    }
+    
+    .btn-submit {
+      width: 100%; padding: 12.5px; border: none; border-radius: 10px;
+      font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-top: 10px;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff;
+      box-shadow: 0 4px 20px rgba(20,184,166,0.25);
+    }
+    .btn-submit:hover  { opacity: 0.88; transform: translateY(-1px); }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      display: none; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .login-link {
+      text-align: center; margin-top: 16px;
+      font-size: 12.5px; color: var(--muted);
+    }
+    .login-link a { color: #5eead4; text-decoration: none; font-weight: 500; }
+    .login-link a:hover { text-decoration: underline; }
+
+    /* Theme overrides for Delivery Agent self registration */
+    .role-agent {
+      --consumer: #f59e0b;
+    }
+    .role-agent .btn-submit {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 4px 20px rgba(245,158,11,0.25);
+    }
+    .role-agent .brand-icon {
+      background: var(--agent);
+      box-shadow: 0 0 22px rgba(245,158,11,0.25);
+    }
+    .role-agent .card-glow {
+      background: linear-gradient(90deg, transparent, rgba(245,158,11,0.6), transparent);
+    }
+    .role-agent .card-head {
+      background: rgba(245,158,11,0.05);
+    }
+    .role-agent .card-head-title i {
+      color: #fbbf24;
+    }
+    .role-agent input:focus, .role-agent select:focus, .role-agent textarea:focus {
+      border-color: rgba(245,158,11,0.5);
+      background: rgba(245,158,11,0.05);
+    }
+    .role-agent .login-link a {
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <div class="blob1"></div>
+  <div class="blob2"></div>
+
+  <div class="wrapper">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="20" height="20" viewBox="0 0 34 34" fill="none">
+          <rect x="2" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,0.9)"/>
+          <rect x="19" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,0.5)"/>
+          <rect x="2" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,0.5)"/>
+          <rect x="19" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,0.25)"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">LPG Distribution System</div>
+        <div class="brand-sub">Priority-based cylinder allocation & delivery</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-glow"></div>
+      <div class="card-head">
+        <div class="card-head-title" id="card-title"><i class="ti ti-user-plus"></i> Create Consumer Account</div>
+        <div class="card-head-desc" id="card-desc">Register to book cylinders and track allocations online</div>
+      </div>
+      
+      <div class="card-body">
+        <div class="msg" id="register-msg"></div>
+        
+        <form id="register-form" onsubmit="event.preventDefault(); doRegister();">
+          <div class="field">
+            <label>Full Name</label>
+            <div class="input-wrap">
+              <i class="ti ti-user"></i>
+              <input type="text" id="r-name" placeholder="Enter your full name" required autocomplete="name">
+            </div>
+          </div>
+
+          <div class="field" id="field-email">
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <i class="ti ti-mail"></i>
+              <input type="email" id="r-email" placeholder="name@example.com" required autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Phone Number</label>
+              <div class="input-wrap">
+                <i class="ti ti-phone"></i>
+                <input type="tel" id="r-phone" placeholder="10-digit number" maxlength="10" required autocomplete="tel">
+              </div>
+            </div>
+            <div class="field" id="field-type">
+              <label>Consumer Type</label>
+              <div class="input-wrap">
+                <i class="ti ti-category"></i>
+                <select id="r-type" style="padding-left: 40px;" required>
+                  <option value="domestic">Domestic</option>
+                  <option value="essential">Essential (Hospitals, etc.)</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>LPG Agency</label>
+            <div class="input-wrap">
+              <i class="ti ti-building-store"></i>
+              <select id="agency-select" style="padding-left: 40px;" required>
+                <option value="" disabled selected>Loading LPG Agencies...</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field" id="field-address">
+            <label>Delivery Address</label>
+            <textarea id="r-address" rows="3" placeholder="Enter your complete delivery address" required autocomplete="street-address"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Password</label>
+              <div class="input-wrap">
+                <i class="ti ti-lock"></i>
+                <input type="password" id="r-password" placeholder="Create password" required autocomplete="new-password">
+              </div>
+            </div>
+            <div class="field">
+              <label>Confirm Password</label>
+              <div class="input-wrap">
+                <i class="ti ti-lock-check"></i>
+                <input type="password" id="r-confirm-password" placeholder="Confirm password" required autocomplete="new-password">
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-submit" id="submit-btn" type="submit">
+            <div class="spinner" id="submit-spinner"></div>
+            <span id="submit-label">Create Account</span>
+          </button>
+        </form>
+
+        <div class="login-link" id="login-link-container">Already have an account? <a href="/?role=consumer">Sign In here</a></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Check role from URL param
+    const params = new URLSearchParams(window.location.search);
+    const role = params.get('role') || 'consumer';
+
+    // Load active agencies list on page load
+    window.addEventListener('load', function() {
+      if (role === 'agent') {
+        document.body.classList.add('role-agent');
+        document.getElementById('card-title').innerHTML = '<i class="ti ti-truck"></i> Create Delivery Agent Account';
+        document.getElementById('card-desc').textContent = 'Register to join an LPG agency and manage deliveries';
+        
+        // Hide fields not needed for agent
+        document.getElementById('field-email').style.display = 'none';
+        document.getElementById('r-email').required = false;
+        
+        document.getElementById('field-type').style.display = 'none';
+        document.getElementById('r-type').required = false;
+        
+        document.getElementById('field-address').style.display = 'none';
+        document.getElementById('r-address').required = false;
+        
+        // Update login link
+        document.getElementById('login-link-container').innerHTML = 'Already have an account? <a href="/?role=agent">Sign In here</a>';
+      }
+      loadAgencies();
+    });
+
+    async function loadAgencies() {
+      try {
+        const res = await fetch('/agencies/?page_size=100');
+        if (!res.ok) throw new Error('Failed to fetch agencies');
+        const data = await res.json();
+        const agencies = data.results || data.agencies || data || [];
+        
+        const select = document.getElementById('agency-select');
+        let html = '';
+        
+        const activeAgencies = agencies.filter(a => a.is_active);
+        if (activeAgencies.length === 0) {
+          html = '<option value="" disabled>No active agencies found</option>';
+        } else {
+          html = '<option value="" disabled selected>' + (role === 'agent' ? 'Select LPG Agency to Join' : 'Select your LPG Agency') + '</option>';
+          activeAgencies.forEach(a => {
+            html += `<option value="${a.agency_id}">${a.agency_name} (${a.address || 'No address'})</option>`;
+          });
+        }
+        select.innerHTML = html;
+      } catch (e) {
+        showMsg('error', 'Connection error: Unable to load agency list.');
+      }
+    }
+
+    async function doRegister() {
+      const name = document.getElementById('r-name').value.trim();
+      const phone = document.getElementById('r-phone').value.trim();
+      const agencyId = document.getElementById('agency-select').value;
+      const password = document.getElementById('r-password').value;
+      const confirmPassword = document.getElementById('r-confirm-password').value;
+      
+      const msgDiv = document.getElementById('register-msg');
+      msgDiv.style.display = 'none';
+
+      // Validations
+      if (role === 'agent') {
+        if (!name || !phone || !agencyId || !password || !confirmPassword) {
+          showMsg('error', 'All fields are required.');
+          return;
+        }
+      } else {
+        const email = document.getElementById('r-email').value.trim();
+        const type = document.getElementById('r-type').value;
+        const address = document.getElementById('r-address').value.trim();
+        if (!name || !email || !phone || !type || !agencyId || !address || !password || !confirmPassword) {
+          showMsg('error', 'All fields are required.');
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showMsg('error', 'Enter a valid email address.');
+          return;
+        }
+      }
+
+      if (!/^\d{10}$/.test(phone)) {
+        showMsg('error', 'Phone number must be exactly 10 digits.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        showMsg('error', 'Passwords do not match.');
+        return;
+      }
+      if (password.length < 4) {
+        showMsg('error', 'Password must be at least 4 characters.');
+        return;
+      }
+
+      setLoading(true);
+
+      if (role === 'agent') {
+        const payload = {
+          full_name: name,
+          phone: phone,
+          agency_id: parseInt(agencyId),
+          password: password
+        };
+        try {
+          const res = await fetch('/auth/agent/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (res.ok) {
+            showMsg('success', 'Account created successfully! Logging you in...');
+            localStorage.setItem('lpg_agent_token', data.access_token);
+            localStorage.setItem('lpg_agent', JSON.stringify({
+              name: data.full_name,
+              phone: data.phone,
+              agent_id: data.agent_id,
+              agency_id: data.agency_id
+            }));
+            setTimeout(() => {
+              window.location.href = '/delivery-portal';
+            }, 1000);
+          } else {
+            showMsg('error', data.detail || 'Registration failed.');
+            setLoading(false);
+          }
+        } catch (e) {
+          showMsg('error', 'Server connection failed. Please try again.');
+          setLoading(false);
+        }
+      } else {
+        const email = document.getElementById('r-email').value.trim();
+        const type = document.getElementById('r-type').value;
+        const address = document.getElementById('r-address').value.trim();
+        const payload = {
+          full_name: name,
+          email: email,
+          phone: phone,
+          address: address,
+          password: password,
+          consumer_type: type,
+          agency_id: parseInt(agencyId)
+        };
+        try {
+          const res = await fetch('/auth/consumer/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (res.ok) {
+            showMsg('success', 'Account created successfully! Logging you in...');
+            localStorage.setItem('lpg_consumer_token', data.access_token);
+            localStorage.setItem('lpg_consumer', JSON.stringify({
+              name: data.full_name,
+              phone: data.phone,
+              consumer_id: data.consumer_id,
+              agency_id: data.agency_id
+            }));
+            setTimeout(() => {
+              window.location.href = '/consumers-page';
+            }, 1000);
+          } else {
+            showMsg('error', data.detail || 'Registration failed.');
+            setLoading(false);
+          }
+        } catch (e) {
+          showMsg('error', 'Server connection failed. Please try again.');
+          setLoading(false);
+        }
+      }
+    }
+
+    function setLoading(on) {
+      document.getElementById('submit-btn').disabled = on;
+      document.getElementById('submit-spinner').style.display = on ? 'block' : 'none';
+      document.getElementById('submit-label').textContent = on ? 'Creating account...' : 'Create Account';
+    }
+
+    function showMsg(type, text) {
+      const msgDiv = document.getElementById('register-msg');
+      msgDiv.style.display = 'block';
+      const icon = type === 'error' ? 'ti-alert-circle' : 'ti-circle-check';
+      msgDiv.innerHTML = `<div class="msg-${type}"><i class="ti ${icon}" style="font-size:14px;flex-shrink:0"></i>${text}</div>`;
+    }
+  </script>
+</body>
+</html>
+

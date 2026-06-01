@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LPG Delivery Agent Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08080f;--bg2:#0e0e1c;--bg3:#13131f;
+  --border:rgba(255,255,255,0.07);
+  --text:#ddddf0;--text2:rgba(221,221,240,0.55);--text3:rgba(221,221,240,0.28);
+  --accent:#f59e0b;--accent2:#d97706;--indigo:#6366f1;
+  --red:#ef4444;--green:#10b981;--yellow:#f59e0b;
+}
+body{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+
+/* NAV */
+.portal-nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:200}
+.portal-nav-brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:var(--text)}
+.portal-nav-brand-icon{width:30px;height:30px;border-radius:7px;background:var(--accent);display:grid;place-items:center}
+.portal-nav-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.portal-nav-user{font-size:13px;color:var(--text2)}
+.portal-nav-user strong{color:var(--text)}
+.btn-signout{padding:7px 14px;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-signout:hover{background:rgba(239,68,68,0.18)}
+
+/* TABS */
+.portal-tabs{display:flex;gap:4px;padding:10px 28px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.portal-tab{padding:7px 16px;border:1px solid var(--border);border-radius:8px;background:none;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
+.portal-tab i{font-size:15px}
+.portal-tab.active{background:rgba(245,158,11,0.12);color:#fbbf24;border-color:rgba(245,158,11,0.3)}
+.portal-tab:hover:not(.active){background:rgba(255,255,255,0.04);color:var(--text)}
+
+/* BODY */
+.portal-body{padding:24px 28px;max-width:980px;margin:0 auto}
+
+/* STATS */
+.p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.p-stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.p-stat-val{font-size:26px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace}
+.p-stat-label{font-size:10.5px;color:var(--text3);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+
+/* CARDS */
+.p-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:18px}
+.p-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02)}
+.p-card-title{font-size:14px;font-weight:600;color:var(--text)}
+.p-card-body{padding:18px}
+
+/* JOB LIST */
+.job-card{background:rgba(255,255,255,0.01);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;transition:border-color 0.2s}
+.job-card:hover{border-color:rgba(245,158,11,0.3)}
+.job-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02)}
+.job-id{font-family:'DM Mono',monospace;font-weight:600;color:#fbbf24}
+.job-status-badge{font-size:10.5px;padding:3px 9px;border-radius:20px;font-weight:600;text-transform:uppercase}
+.status-allocated{background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.2)}
+.status-out_for_delivery{background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)}
+.status-delayed{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
+.status-customer_not_home{background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)}
+.status-delivered{background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.2)}
+.job-details{padding:16px;display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media(max-width:600px){.job-details{grid-template-columns:1fr}}
+.job-info-left{display:flex;flex-direction:column;gap:8px}
+.job-info-item{display:flex;align-items:flex-start;gap:8px;font-size:13.5px}
+.job-info-item i{color:var(--text3);margin-top:2px;font-size:16px}
+.job-info-right{display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:8px}
+
+.instructions-box{background:rgba(245,158,11,0.04);border:1px dashed rgba(245,158,11,0.25);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--text2);margin-top:10px;line-height:1.4}
+.instructions-box strong{color:#fbbf24}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:'DM Sans',sans-serif;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 12px rgba(245,158,11,0.2)}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--text2);border-color:var(--border)}
+.btn-outline:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+.btn-danger{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.25)}
+.btn-danger:hover{background:rgba(239,68,68,0.25)}
+.btn-sm{padding:5px 10px;font-size:11.5px;border-radius:6px}
+
+/* MODAL / OVERLAY */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent);border-radius:18px 18px 0 0}
+.modal-header{padding:18px 24px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;color:var(--text);display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:20px 24px;overflow-y:auto;flex-grow:1}
+.modal-footer{padding:14px 24px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+
+/* CHAT BOX */
+.chat-messages{height:280px;overflow-y:auto;border:1px solid var(--border);background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.chat-msg{max-width:80%;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.4;display:flex;flex-direction:column}
+.chat-msg.sent{align-self:flex-end;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:var(--text)}
+.chat-msg.received{align-self:flex-start;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text)}
+.chat-msg-sender{font-size:10px;color:var(--text3);margin-bottom:3px;font-weight:600;text-transform:uppercase}
+.chat-msg-time{font-size:9.5px;color:var(--text3);align-self:flex-end;margin-top:4px}
+.chat-input-row{display:flex;gap:8px}
+.chat-input{flex-grow:1;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);outline:none;font-family:inherit}
+.chat-input:focus{border-color:rgba(245,158,11,0.4)}
+
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:10.5px;font-weight:600;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.form-group select,.form-group input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--text);outline:none;font-family:inherit}
+.form-group select:focus,.form-group input:focus{border-color:rgba(245,158,11,0.4)}
+
+/* TOAST */
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:11px 16px;border-radius:10px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;min-width:220px}
+.toast-success{border-left:3px solid var(--green)}
+.toast-error{border-left:3px solid var(--red)}
+.toast-warning{border-left:3px solid var(--yellow)}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<nav class="portal-nav">
+  <div class="portal-nav-brand">
+    <div class="portal-nav-brand-icon">
+      <i class="ti ti-truck" style="font-size:18px;color:#fff"></i>
+    </div>
+    LPG Delivery Portal
+  </div>
+  <div class="portal-nav-right">
+    <span class="portal-nav-user">Hello, <strong id="nav-name">Agent</strong></span>
+    <button class="btn-signout" onclick="doLogout()"><i class="ti ti-power"></i> Sign Out</button>
+  </div>
+</nav>
+
+<div class="portal-tabs">
+  <button class="portal-tab active" id="tab-active" onclick="showSection('active')"><i class="ti ti-checklist"></i> Active Deliveries</button>
+  <button class="portal-tab" id="tab-history" onclick="showSection('history')"><i class="ti ti-history"></i> Delivery History</button>
+  <button class="portal-tab" id="tab-pool" onclick="showSection('pool')"><i class="ti ti-route-2"></i> Available Pool</button>
+  <button class="portal-tab" id="tab-earnings" onclick="showSection('earnings')"><i class="ti ti-wallet"></i> My Earnings</button>
+</div>
+
+<div class="portal-body">
+  <!-- STATS -->
+  <div class="p-stats">
+    <div class="p-stat"><div class="p-stat-val" id="stat-pending">-</div><div class="p-stat-label">Assigned Jobs</div></div>
+    <div class="p-stat"><div class="p-stat-val" id="stat-out">-</div><div class="p-stat-label">Out For Delivery</div></div>
+    <div class="p-stat"><div class="p-stat-val" id="stat-done">-</div><div class="p-stat-label">Delivered Total</div></div>
+  </div>
+
+  <!-- ACTIVE DELIVERIES -->
+  <div id="sec-active">
+    <div class="p-card">
+      <div class="p-card-header">
+        <i class="ti ti-truck-delivery" style="color:#fbbf24;font-size:16px"></i>
+        <span class="p-card-title">My Deliveries Queue</span>
+      </div>
+      <div class="p-card-body" id="active-list">
+        <span class="spinner"></span> Loading jobs...
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="sec-history" style="display:none">
+    <div class="p-card">
+      <div class="p-card-header">
+        <i class="ti ti-checkbox" style="color:#fbbf24;font-size:16px"></i>
+        <span class="p-card-title">Completed Deliveries</span>
+      </div>
+      <div class="p-card-body" id="history-list">
+        <span class="spinner"></span> Loading history...
+      </div>
+    </div>
+  </div>
+
+  <!-- AVAILABLE POOL -->
+  <div id="sec-pool" style="display:none">
+    <div class="p-card">
+      <div class="p-card-header">
+        <i class="ti ti-route-2" style="color:#fbbf24;font-size:16px"></i>
+        <span class="p-card-title">Available Gig Deliveries (Unassigned Pool)</span>
+      </div>
+      <div class="p-card-body" id="pool-list">
+        <span class="spinner"></span> Loading pool...
+      </div>
+    </div>
+  </div>
+
+  <!-- MY EARNINGS -->
+  <div id="sec-earnings" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px">
+      <div class="p-stat" style="border:1px solid rgba(16,185,129,0.2);background:rgba(16,185,129,0.02)">
+        <div class="p-stat-val" id="earnings-total-jobs" style="color:#34d399">-</div>
+        <div class="p-stat-label">Delivered Orders</div>
+      </div>
+      <div class="p-stat" style="border:1px solid rgba(16,185,129,0.2);background:rgba(16,185,129,0.02)">
+        <div class="p-stat-val" id="earnings-total-amount" style="color:#34d399">₹0</div>
+        <div class="p-stat-label">Total Commission Earned</div>
+      </div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-header">
+        <i class="ti ti-wallet" style="color:#10b981;font-size:16px"></i>
+        <span class="p-card-title">Earnings History & Commission Ledger</span>
+      </div>
+      <div class="p-card-body" id="earnings-list">
+        <span class="spinner"></span> Loading earnings...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT MODAL -->
+<div class="modal-overlay" id="chat-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-weight:600" id="chat-title">Chat with Consumer</span>
+      <button onclick="closeChat()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="chat-messages" id="chat-messages">
+        <!-- Messages loaded dynamically -->
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="chat-input" id="chat-input-text" placeholder="Type a message to customer..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+        <button class="btn btn-primary" onclick="sendChatMessage()"><i class="ti ti-send"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATE STATUS MODAL -->
+<div class="modal-overlay" id="status-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-weight:600">Update Delivery Progress</span>
+      <button onclick="closeStatusModal()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Current Status</label>
+        <select id="update-status-select" onchange="onStatusSelectChange()">
+          <option value="allocated">Allocated / Pending Dispatch</option>
+          <option value="out_for_delivery">Out for Delivery</option>
+          <option value="delayed">Delayed</option>
+          <option value="customer_not_home">Customer Not Home</option>
+          <option value="delivered">Delivered (Verify via QR)</option>
+        </select>
+      </div>
+
+      <!-- QR VERIFICATION PANEL (visible only if delivered is selected) -->
+      <div class="form-group" id="qr-verify-panel" style="display:none;background:rgba(245,158,11,0.05);border:1px dashed rgba(245,158,11,0.25);border-radius:10px;padding:14px;margin-top:14px">
+        <label style="color:#fbbf24;display:flex;align-items:center;gap:6px"><i class="ti ti-qrcode"></i> Customer QR Verification</label>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:12px;margin-top:4px">Ask the customer for their delivery confirmation QR Code token, or enter the alphanumeric token key below.</p>
+        <input type="text" id="qr-token-input" placeholder="Enter customer's 64-character QR token key">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitStatusUpdate()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+var agentData = null;
+var activeJobs = [];
+var historyJobs = [];
+var currentChatBookingId = null;
+var currentStatusBookingId = null;
+var chatPollInterval = null;
+
+// ── Auth ──
+function doLogout() {
+  localStorage.removeItem('lpg_agent_token');
+  localStorage.removeItem('lpg_agent');
+  window.location.href = '/';
+}
+
+function getAgentToken() { return localStorage.getItem('lpg_agent_token'); }
+
+async function agentFetch(url, opts) {
+  var options = opts || {};
+  options.headers = Object.assign({
+    'Authorization': 'Bearer ' + getAgentToken(),
+    'Content-Type': 'application/json'
+  }, options.headers || {});
+  var res = await fetch(url, options);
+  if (res.status === 401) {
+    doLogout();
+    throw new Error('Unauthorized');
+  }
+  var data = await res.json().catch(function(){return {};});
+  if (!res.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+}
+
+function showToast(msg, type) {
+  var container = document.getElementById('toast-container');
+  var t = document.createElement('div');
+  t.className = 'toast toast-' + (type || 'info');
+  t.innerHTML = '<span>' + msg + '</span>';
+  container.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3500);
+}
+
+// ── Init ──
+window.addEventListener('load', function() {
+  var token = getAgentToken();
+  var stored = localStorage.getItem('lpg_agent');
+  if (!token || !stored) { window.location.href = '/?role=agent'; return; }
+  agentData = JSON.parse(stored);
+  document.getElementById('nav-name').textContent = agentData.name || 'Agent';
+  loadAgentPortal();
+});
+
+function loadAgentPortal() {
+  loadStats();
+  loadJobs();
+}
+
+async function loadStats() {
+  try {
+    var data = await agentFetch('/agent/bookings');
+    var active = data.filter(function(b){return b.status !== 'delivered' && b.status !== 'cancelled';});
+    var outOfDelivery = data.filter(function(b){return b.delivery_status === 'out_for_delivery';});
+    var delivered = data.filter(function(b){return b.status === 'delivered';});
+    document.getElementById('stat-pending').textContent = active.length;
+    document.getElementById('stat-out').textContent = outOfDelivery.length;
+    document.getElementById('stat-done').textContent = delivered.length;
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function loadJobs() {
+  try {
+    var data = await agentFetch('/agent/bookings');
+    activeJobs = data.filter(function(b){return b.status !== 'delivered' && b.status !== 'cancelled';});
+    historyJobs = data.filter(function(b){return b.status === 'delivered' || b.status === 'cancelled';});
+
+    renderActiveJobs();
+    renderHistoryJobs();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function renderActiveJobs() {
+  var list = document.getElementById('active-list');
+  if (!activeJobs.length) {
+    list.innerHTML = '<div class="empty-state">No active deliveries assigned.</div>';
+    return;
+  }
+  list.innerHTML = activeJobs.map(function(j) {
+    var instructions = j.delivery_instructions ? 
+      '<div class="instructions-box"><strong>Consumer Instructions:</strong> "' + j.delivery_instructions + '"</div>' : '';
+    var delStatus = j.delivery_status || 'allocated';
+    var statusLabel = delStatus.replace(/_/g, ' ');
+
+    return '<div class="job-card">' +
+      '<div class="job-header">' +
+        '<span class="job-id">Booking #' + j.booking_id + '</span>' +
+        '<span class="job-status-badge status-' + delStatus + '">' + statusLabel + '</span>' +
+      '</div>' +
+      '<div class="job-details">' +
+        '<div class="job-info-left">' +
+          '<div class="job-info-item"><i class="ti ti-user"></i><strong>' + j.consumer_name + '</strong></div>' +
+          '<div class="job-info-item"><i class="ti ti-phone"></i><a href="tel:' + j.consumer_phone + '" style="color:#fbbf24">' + j.consumer_phone + '</a></div>' +
+          '<div class="job-info-item"><i class="ti ti-map-pin"></i>' + j.consumer_address + '</div>' +
+          '<div class="job-info-item"><i class="ti ti-cylinder"></i>Refills Requested: ' + j.cylinders_requested + ' Cylinders</div>' +
+          instructions +
+        '</div>' +
+        '<div class="job-info-right">' +
+          '<button class="btn btn-primary" onclick="openStatusModal(' + j.booking_id + ', \'' + delStatus + '\')"><i class="ti ti-refresh"></i> Update Status</button>' +
+          '<button class="btn btn-outline" onclick="openChat(' + j.booking_id + ', \'' + j.consumer_name + '\')"><i class="ti ti-message-2"></i> Chat with Customer</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderHistoryJobs() {
+  var list = document.getElementById('history-list');
+  if (!historyJobs.length) {
+    list.innerHTML = '<div class="empty-state">No completed deliveries found.</div>';
+    return;
+  }
+  list.innerHTML = historyJobs.map(function(j) {
+    var delStatus = j.delivery_status || j.status;
+    var statusLabel = delStatus.replace(/_/g, ' ');
+    return '<div class="job-card" style="opacity:0.75">' +
+      '<div class="job-header">' +
+        '<span class="job-id">Booking #' + j.booking_id + '</span>' +
+        '<span class="job-status-badge status-' + delStatus + '">' + statusLabel + '</span>' +
+      '</div>' +
+      '<div class="job-details">' +
+        '<div class="job-info-left">' +
+          '<div class="job-info-item"><i class="ti ti-user"></i><strong>' + j.consumer_name + '</strong></div>' +
+          '<div class="job-info-item"><i class="ti ti-map-pin"></i>' + j.consumer_address + '</div>' +
+          '<div class="job-info-item"><i class="ti ti-cylinder"></i>Refills: ' + j.cylinders_requested + ' Cylinders</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function showSection(sec) {
+  document.getElementById('sec-active').style.display = (sec==='active') ? '' : 'none';
+  document.getElementById('sec-history').style.display = (sec==='history') ? '' : 'none';
+  document.getElementById('sec-pool').style.display = (sec==='pool') ? '' : 'none';
+  document.getElementById('sec-earnings').style.display = (sec==='earnings') ? '' : 'none';
+
+  document.getElementById('tab-active').classList.toggle('active', sec==='active');
+  document.getElementById('tab-history').classList.toggle('active', sec==='history');
+  document.getElementById('tab-pool').classList.toggle('active', sec==='pool');
+  document.getElementById('tab-earnings').classList.toggle('active', sec==='earnings');
+
+  if (sec === 'active' || sec === 'history') {
+    loadJobs();
+  } else if (sec === 'pool') {
+    loadPoolJobs();
+  } else if (sec === 'earnings') {
+    loadEarnings();
+  }
+}
+
+async function loadPoolJobs() {
+  var list = document.getElementById('pool-list');
+  list.innerHTML = '<span class="spinner"></span> Loading available jobs...';
+  try {
+    var data = await agentFetch('/agent/bookings/available');
+    if (!data.length) {
+      list.innerHTML = '<div class="empty-state">No unclaimed bookings available in your agency at the moment.</div>';
+      return;
+    }
+    list.innerHTML = data.map(function(j) {
+      return '<div class="job-card">' +
+        '<div class="job-header">' +
+          '<span class="job-id">Booking #' + j.booking_id + '</span>' +
+          '<span class="job-status-badge status-allocated">Unassigned</span>' +
+        '</div>' +
+        '<div class="job-details">' +
+          '<div class="job-info-left">' +
+            '<div class="job-info-item"><i class="ti ti-user"></i><strong>' + j.consumer_name + '</strong></div>' +
+            '<div class="job-info-item"><i class="ti ti-map-pin"></i>' + j.consumer_address + '</div>' +
+            '<div class="job-info-item"><i class="ti ti-cylinder"></i>Refills Requested: ' + j.cylinders_requested + ' Cylinders</div>' +
+          '</div>' +
+          '<div class="job-info-right">' +
+            '<button class="btn btn-primary" onclick="claimJob(' + j.booking_id + ')"><i class="ti ti-hand-finger"></i> Claim Job</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state" style="color:var(--red)">' + e.message + '</div>';
+    showToast(e.message, 'error');
+  }
+}
+
+async function claimJob(bookingId) {
+  try {
+    await agentFetch('/agent/bookings/' + bookingId + '/claim', {
+      method: 'POST'
+    });
+    showToast('Booking #' + bookingId + ' claimed successfully!', 'success');
+    loadStats();
+    loadPoolJobs();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function loadEarnings() {
+  var list = document.getElementById('earnings-list');
+  list.innerHTML = '<span class="spinner"></span> Loading earnings...';
+  try {
+    var data = await agentFetch('/agent/earnings');
+    document.getElementById('earnings-total-jobs').textContent = data.total_delivered;
+    document.getElementById('earnings-total-amount').textContent = '₹' + parseFloat(data.total_earnings).toFixed(2);
+    
+    var history = data.history || [];
+    if (!history.length) {
+      list.innerHTML = '<div class="empty-state">No completed deliveries/earnings yet.</div>';
+      return;
+    }
+    
+    list.innerHTML = history.map(function(item) {
+      var dateStr = item.delivered_at ? new Date(item.delivered_at).toLocaleDateString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      }) : 'N/A';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)">' +
+        '<div>' +
+          '<div style="font-weight:600;color:var(--text)">Booking #' + item.booking_id + '</div>' +
+          '<div style="font-size:12.5px;color:var(--text2)">Delivered to ' + item.consumer_name + ' • ' + dateStr + '</div>' +
+        '</div>' +
+        '<div style="font-family:\'DM Mono\',monospace;font-weight:600;color:#34d399;font-size:15px">+₹' + parseFloat(item.payout).toFixed(2) + '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state" style="color:var(--red)">' + e.message + '</div>';
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Status Modal ──
+function openStatusModal(bookingId, currentStatus) {
+  currentStatusBookingId = bookingId;
+  document.getElementById('update-status-select').value = currentStatus;
+  document.getElementById('status-modal').classList.add('open');
+  onStatusSelectChange();
+}
+
+function closeStatusModal() {
+  document.getElementById('status-modal').classList.remove('open');
+  currentStatusBookingId = null;
+}
+
+function onStatusSelectChange() {
+  var select = document.getElementById('update-status-select');
+  var qrPanel = document.getElementById('qr-verify-panel');
+  if (select.value === 'delivered') {
+    qrPanel.style.display = 'block';
+  } else {
+    qrPanel.style.display = 'none';
+  }
+}
+
+async function submitStatusUpdate() {
+  var select = document.getElementById('update-status-select');
+  var statusValue = select.value;
+  var tokenInput = document.getElementById('qr-token-input').value.trim();
+
+  if (statusValue === 'delivered') {
+    if (!tokenInput) {
+      showToast('QR Verification token is required to mark delivered.', 'error');
+      return;
+    }
+    // Call QR scan marking delivered endpoint
+    try {
+      var scanResult = await agentFetch('/qr/scan', {
+        method: 'POST',
+        body: JSON.stringify({
+          token: tokenInput,
+          action: 'mark_delivered',
+          agent_id: agentData.agent_id,
+          device_info: navigator.userAgent
+        })
+      });
+      if (scanResult.valid) {
+        showToast('QR Verified! Job marked as Delivered.', 'success');
+        closeStatusModal();
+        loadAgentPortal();
+      } else {
+        showToast(scanResult.message || 'QR Verification failed.', 'error');
+      }
+    } catch(e) {
+      showToast(e.message, 'error');
+    }
+  } else {
+    // Normal progress update
+    try {
+      await agentFetch('/agent/bookings/' + currentStatusBookingId + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ status: statusValue })
+      });
+      showToast('Status updated to ' + statusValue.replace(/_/g, ' '), 'success');
+      closeStatusModal();
+      loadAgentPortal();
+    } catch(e) {
+      showToast(e.message, 'error');
+    }
+  }
+}
+
+// ── Chat ──
+function openChat(bookingId, consumerName) {
+  currentChatBookingId = bookingId;
+  document.getElementById('chat-title').textContent = 'Chat: ' + consumerName + ' (Booking #' + bookingId + ')';
+  document.getElementById('chat-modal').classList.add('open');
+  loadChatMessages();
+  chatPollInterval = setInterval(loadChatMessages, 4000);
+}
+
+function closeChat() {
+  document.getElementById('chat-modal').classList.remove('open');
+  currentChatBookingId = null;
+  if (chatPollInterval) {
+    clearInterval(chatPollInterval);
+    chatPollInterval = null;
+  }
+}
+
+async function loadChatMessages() {
+  if (!currentChatBookingId) return;
+  try {
+    var history = await agentFetch('/bookings/' + currentChatBookingId + '/chat');
+    var list = document.getElementById('chat-messages');
+    var isScrolledToBottom = list.scrollHeight - list.clientHeight <= list.scrollTop + 30;
+
+    list.innerHTML = history.length ? history.map(function(m) {
+      var time = new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      var cls = m.sender_type === 'agent' ? 'sent' : 'received';
+      return '<div class="chat-msg ' + cls + '">' +
+        '<span class="chat-msg-sender">' + m.sender_name + '</span>' +
+        '<span>' + m.message + '</span>' +
+        '<span class="chat-msg-time">' + time + '</span>' +
+      '</div>';
+    }).join('') : '<div class="empty-state" style="font-size:12px;padding:20px">No messages yet. Send a message to start conversation.</div>';
+
+    if (isScrolledToBottom || history.length === 1) {
+      list.scrollTop = list.scrollHeight;
+    }
+  } catch(e) {
+    console.error('Chat error: ' + e.message);
+  }
+}
+
+async function sendChatMessage() {
+  var input = document.getElementById('chat-input-text');
+  var txt = input.value.trim();
+  if (!txt || !currentChatBookingId) return;
+  try {
+    await agentFetch('/bookings/' + currentChatBookingId + '/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: txt })
+    });
+    input.value = '';
+    loadChatMessages();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>

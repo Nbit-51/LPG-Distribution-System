@@ -1,0 +1,73 @@
+﻿<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Allocation - LPG System</title><link rel="stylesheet" href="/static/css/main.css"></head><body><div class="app-shell">  <div id="sidebar-mount"></div>  <main class="main-content">    <div class="page-header">      <div><h1 class="page-title">Allocation Engine</h1><p class="page-subtitle">Priority-based distribution &amp; crisis management</p></div>    </div>    <div id="crisis-banner"></div>    <div class="card" style="margin-bottom:24px">      <div class="card-header"><h3 class="card-title">Priority Order</h3></div>      <div style="display:flex;flex-direction:column;gap:12px">        <div style="display:flex;align-items:center;gap:16px;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px">          <div style="width:40px;height:40px;background:#16a34a;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0">1</div>          <div><div style="font-weight:600">Domestic Consumers</div><div style="font-size:12px;color:#64748b">Households — processed first regardless of stock</div></div>          <span class="badge badge-domestic" style="margin-left:auto">domestic</span>        </div>        <div style="display:flex;align-items:center;gap:16px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">          <div style="width:40px;height:40px;background:#2563eb;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0">2</div>          <div><div style="font-weight:600">Essential Services</div><div style="font-size:12px;color:#64748b">Hospitals, schools, emergency — second priority</div></div>          <span class="badge badge-essential" style="margin-left:auto">essential</span>        </div>        <div style="display:flex;align-items:center;gap:16px;padding:14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px">          <div style="width:40px;height:40px;background:#ea580c;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0">3</div>          <div><div style="font-weight:600">Commercial Users</div><div style="font-size:12px;color:#64748b">Restaurants, hotels — allocated from remaining stock</div></div>          <span class="badge badge-commercial" style="margin-left:auto">commercial</span>        </div>      </div>    </div>    <div class="grid-2" style="margin-bottom:24px">      <div class="card">        <div class="card-header"><h3 class="card-title">Run Allocation</h3></div>        <p style="font-size:13px;color:#64748b;margin-bottom:16px">Process all pending bookings using priority rules.</p>        <div class="form-group"><label class="form-label">Agency (optional)</label><select id="alloc-agency" class="form-control"><option value="">All Agencies</option></select></div>        <button class="btn btn-primary" style="width:100%" onclick="runAllocation()">Run Priority Allocation</button>        <div id="alloc-result" style="margin-top:14px;display:none;padding:12px;background:#f8fafc;border-radius:6px;font-family:monospace;font-size:12px"></div>      </div>      <div class="card">        <div class="card-header"><h3 class="card-title">Crisis Mode</h3></div>        <p style="font-size:13px;color:#64748b;margin-bottom:16px">When active, commercial allocations are suspended.</p>        <div class="form-group"><label class="form-label">Agency</label><select id="crisis-agency" class="form-control"><option value="1">Default Agency</option></select></div>        <div class="form-group"><label class="form-label">Reason</label><textarea id="crisis-reason" class="form-control" rows="2" placeholder="e.g. Severe supply shortage"></textarea></div>        <div style="display:flex;gap:10px">          <button class="btn btn-danger" style="flex:1" onclick="setCrisis(true)">Activate Crisis</button>          <button class="btn btn-success" style="flex:1" onclick="setCrisis(false)">Deactivate</button>        </div>      </div>    </div>    <div class="card">      <div class="card-header"><h3 class="card-title">Allocation History</h3><button class="btn btn-sm btn-outline" onclick="loadHistory()">Refresh</button></div>      <div class="table-wrap">        <table class="table">          <thead><tr><th>Booking</th><th>Consumer</th><th>Type</th><th>Agency</th><th>Cylinders</th><th>Priority</th><th>Date</th></tr></thead>          <tbody id="history-body"><tr><td colspan="7" class="table-empty">Loading...</td></tr></tbody>        </table>      </div>    </div>  </main></div><div id="toast-container"></div><script src="/static/js/utils.js"></script><script src="/static/js/layout.js"></script><script>
+if (!requireAuth()) {}
+else { renderSidebar('allocation'); loadPage(); loadHistory(); }
+
+async function loadPage() {
+  try {
+    const [agencyData, ov] = await Promise.all([
+      api.get('/agencies/?page_size=100'),
+      api.get('/admin/overview').catch(()=>({}))
+    ]);
+    const agencies = agencyData.results || [];
+    const opts = agencies.map(a => `<option value="${a.agency_id}">${a.agency_name}</option>`).join('');
+    document.getElementById('alloc-agency').innerHTML = '<option value="">All Agencies</option>' + opts;
+    document.getElementById('crisis-agency').innerHTML = opts;
+    const banner = document.getElementById('crisis-banner');
+    banner.innerHTML = ov.crisis_active ? '<div style="background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;margin-bottom:20px"><strong>CRISIS MODE ACTIVE</strong> — Commercial allocation is currently suspended.</div>' : '';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function loadHistory() {
+  try {
+    const data = await api.get('/allocation/history?page_size=30').catch(()=>({results:[]}));
+    const rows = data.results || [];
+    document.getElementById('history-body').innerHTML = rows.length ? rows.map(a => `<tr>
+      <td>#${a.booking_id}</td>
+      <td>${a.consumer_name||'--'}</td>
+      <td><span class="badge badge-${a.consumer_type||'domestic'}">${a.consumer_type||'--'}</span></td>
+      <td>${a.agency_name||'--'}</td>
+      <td>${a.cylinders_allocated||a.cylinders_requested||'--'}</td>
+      <td>${a.priority_rank||'--'}</td>
+      <td>${fmtDate(a.allocated_at||a.created_at)}</td>
+    </tr>`).join('') : '<tr><td colspan="7" class="table-empty">No allocation history</td></tr>';
+  } catch(e) {
+    document.getElementById('history-body').innerHTML = '<tr><td colspan="7" class="table-empty">Could not load history</td></tr>';
+  }
+}
+
+async function runAllocation() {
+  const agencyId = document.getElementById('alloc-agency').value;
+  const resultEl = document.getElementById('alloc-result');
+  resultEl.style.display = 'block';
+  resultEl.style.color = '#64748b';
+  resultEl.textContent = 'Running allocation engine...';
+  try {
+    const data = await api.post('/allocation/run/' + (agencyId || 1), {});
+    resultEl.style.color = '#16a34a';
+    resultEl.textContent = 'Allocation complete\nProcessed: ' + (data.processed||0) + '\nAllocated: ' + (data.allocated||0) + ' cylinders\nSkipped: ' + (data.skipped||0);
+    toast('Allocation completed', 'success');
+    loadHistory();
+  } catch(e) {
+    resultEl.style.color = '#dc2626';
+    resultEl.textContent = 'Error: ' + e.message;
+    toast(e.message, 'error');
+  }
+}
+
+async function setCrisis(activate) {
+  const id = parseInt(document.getElementById('crisis-agency').value) || 1;
+  const reason = document.getElementById('crisis-reason').value.trim() || (activate ? 'Manual activation' : 'Manual deactivation');
+  try {
+    if (activate) {
+      await api.post('/allocation/crisis/' + id + '/activate', {threshold_cylinders: 50, notes: reason});
+      toast('Crisis mode activated', 'warning');
+    } else {
+      await api.post('/allocation/crisis/' + id + '/resolve', {});
+      toast('Crisis mode deactivated', 'success');
+    }
+    loadPage();
+  } catch(e) { toast(e.message, 'error'); }
+}
+</script>
+</body>
+</html>

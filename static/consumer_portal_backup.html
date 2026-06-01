@@ -1,0 +1,662 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LPG Consumer Portal</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+/* AUTH SCREEN */
+body.auth-mode { background: linear-gradient(135deg, #1a2744 0%, #0f1729 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.auth-wrap { width: 100%; max-width: 480px; }
+.auth-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.auth-header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 32px 36px 24px; text-align: center; color: #fff; }
+.auth-header h1 { font-size: 22px; font-weight: 700; }
+.auth-header p { font-size: 13px; opacity: .8; margin-top: 6px; }
+.auth-tabs { display: flex; border-bottom: 1px solid #e5e7eb; background: #fff; }
+.auth-tab { flex: 1; padding: 14px; border: none; background: none; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; font-family: inherit; }
+.auth-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+.auth-body { padding: 28px 36px 32px; }
+#auth-msg { margin-bottom: 12px; font-size: 13px; border-radius: 8px; }
+#auth-msg.error { padding: 10px 14px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+#auth-msg.success { padding: 10px 14px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+/* PORTAL APP */
+body.portal-mode { background: #f3f4f6; min-height: 100vh; }
+.portal-nav { background: #1a2744; padding: 0 32px; display: flex; align-items: center; gap: 16px; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.portal-nav-brand { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
+.portal-nav-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.portal-nav-user { font-size: 13px; color: rgba(255,255,255,.7); }
+.portal-nav-user strong { color: #fff; }
+.portal-tabs { display: flex; gap: 4px; padding: 12px 32px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+.portal-tab { padding: 8px 18px; border: 1px solid #e5e7eb; border-radius: 8px; background: none; font-size: 13px; font-weight: 500; color: #374151; cursor: pointer; transition: all .15s; font-family: inherit; }
+.portal-tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+.portal-tab:hover:not(.active) { background: #f9fafb; }
+.portal-body { padding: 24px 32px; max-width: 960px; }
+
+/* CARDS */
+.p-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.p-card-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 10px; }
+.p-card-title { font-size: 15px; font-weight: 600; color: #111827; }
+.p-card-body { padding: 20px; }
+
+/* STATS */
+.p-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.p-stat { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.p-stat-val { font-size: 26px; font-weight: 700; color: #111827; font-family: monospace; }
+.p-stat-label { font-size: 11px; color: #6b7280; margin-top: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+
+/* FORMS */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; color: #111827; background: #fff; outline: none; transition: border-color .15s; font-family: inherit; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.form-group input::placeholder, .form-group textarea::placeholder { color: #9ca3af; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all .15s; white-space: nowrap; font-family: inherit; }
+.btn-primary { background: #2563eb; color: #fff; width: 100%; padding: 12px; font-size: 14px; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-outline { background: transparent; color: #374151; border-color: #d1d5db; width: 100%; padding: 10px; }
+.btn-outline:hover { background: #f9fafb; }
+.btn-danger { background: #dc2626; color: #fff; }
+.btn-danger:hover { background: #b91c1c; }
+.btn-sm { padding: 6px 14px; font-size: 12px; width: auto; }
+.btn-signout { padding: 7px 16px; background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
+.btn-signout:hover { background: rgba(255,255,255,.25); }
+
+/* TABLES */
+.p-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.p-table th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .07em; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
+.p-table td { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+.p-table tr:last-child td { border-bottom: none; }
+.p-table tr:hover td { background: #f9fafb; }
+
+/* BADGES */
+.p-badge { display: inline-flex; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.p-badge-pending { background: #fef3c7; color: #d97706; }
+.p-badge-allocated { background: #dbeafe; color: #2563eb; }
+.p-badge-delivered { background: #d1fae5; color: #059669; }
+.p-badge-cancelled { background: #fee2e2; color: #dc2626; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.modal-header { padding: 20px 24px 16px; border-bottom: 1px solid #e5e7eb; font-size: 16px; font-weight: 700; color: #111827; }
+.modal-body { padding: 20px 24px 24px; }
+
+/* PAYMENT OPTIONS */
+.pay-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.pay-option { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all .15s; font-size: 13px; font-weight: 500; color: #374151; }
+.pay-option:hover { border-color: #93c5fd; background: #eff6ff; }
+.pay-option.selected { border-color: #2563eb; background: #eff6ff; }
+.pay-option-icon { font-size: 22px; }
+
+/* QR */
+.qr-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 14px; display: flex; gap: 16px; align-items: flex-start; }
+.qr-img { width: 110px; height: 110px; border-radius: 8px; object-fit: contain; border: 1px solid #e5e7eb; flex-shrink: 0; }
+
+/* MISC */
+.hidden { display: none !important; }
+.empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
+.empty-icon { font-size: 32px; margin-bottom: 12px; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #2563eb; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOAST */
+#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { background: #1a2744; color: #fff; padding: 11px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.2); display: flex; align-items: center; gap: 8px; min-width: 220px; opacity: 0; transform: translateX(16px); transition: opacity .25s, transform .25s; pointer-events: all; }
+.toast.show { opacity: 1; transform: translateX(0); }
+.toast.success { border-left: 3px solid #16a34a; }
+.toast.error { border-left: 3px solid #dc2626; }
+.toast.warning { border-left: 3px solid #d97706; }
+</style>
+</head>
+<body class="auth-mode">
+
+<!-- AUTH SECTION -->
+<div class="auth-wrap" id="auth-section">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>LPG Consumer Portal</h1>
+      <p>Book cylinders, track deliveries, manage your account</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchTab('register')">Create Account</button>
+    </div>
+    <div class="auth-body">
+      <div id="auth-msg"></div>
+
+      <!-- LOGIN -->
+      <div id="login-form">
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" id="l-phone" placeholder="Enter your registered phone number">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="l-pass" placeholder="Enter password">
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+        <p style="text-align:center;margin-top:16px;font-size:13px;color:#6b7280">
+          New here? <a href="#" onclick="switchTab('register')" style="color:#2563eb;font-weight:600">Create an account</a>
+        </p>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="register-form" class="hidden">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="r-name" placeholder="Your full name">
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="tel" id="r-phone" placeholder="Mobile number">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Address *</label>
+          <input type="text" id="r-addr" placeholder="Full delivery address">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Consumer Type *</label>
+            <select id="r-type">
+              <option value="domestic">Domestic (Household)</option>
+              <option value="essential">Essential Service</option>
+              <option value="commercial">Commercial</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Agency *</label>
+            <select id="r-agency"><option value="">Select agency...</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password *</label>
+            <input type="password" id="r-pass" placeholder="Create password">
+          </div>
+          <div class="form-group">
+            <label>Confirm Password *</label>
+            <input type="password" id="r-pass2" placeholder="Repeat password">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
+        <p style="text-align:center;margin-top:16px;font-size:13px;color:#6b7280">
+          Already have an account? <a href="#" onclick="switchTab('login')" style="color:#2563eb;font-weight:600">Sign in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PORTAL APP -->
+<div id="portal-section" class="hidden">
+  <nav class="portal-nav">
+    <span class="portal-nav-brand">LPG Consumer Portal</span>
+    <div class="portal-nav-right">
+      <span class="portal-nav-user">Hello, <strong id="nav-name">User</strong></span>
+      <button class="btn-signout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </nav>
+  <div class="portal-tabs">
+    <button class="portal-tab active" onclick="showSection('home')">Home</button>
+    <button class="portal-tab" onclick="showSection('book')">Book Cylinder</button>
+    <button class="portal-tab" onclick="showSection('bookings')">My Bookings</button>
+    <button class="portal-tab" onclick="showSection('qrcodes')">My QR Codes</button>
+  </div>
+  <div class="portal-body">
+
+    <!-- HOME -->
+    <div id="sec-home">
+      <div class="p-stats" id="home-stats">
+        <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Total Bookings</div></div>
+        <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Delivered</div></div>
+        <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Pending</div></div>
+        <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Cancelled</div></div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">My Account</span></div>
+        <div class="p-card-body" id="home-profile"><div class="spinner"></div> Loading...</div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Recent Bookings</span></div>
+        <div style="overflow-x:auto">
+          <table class="p-table">
+            <thead><tr><th>#</th><th>Date</th><th>Cylinders</th><th>Status</th><th>Delivery</th></tr></thead>
+            <tbody id="home-bookings"><tr><td colspan="5" style="padding:20px;text-align:center"><span class="spinner"></span></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOOK -->
+    <div id="sec-book" class="hidden">
+      <div class="p-card">
+        <div class="p-card-header">
+          <span style="font-size:18px">&#128308;</span>
+          <span class="p-card-title">Book LPG Cylinder</span>
+        </div>
+        <div class="p-card-body">
+          <div class="form-group">
+            <label>Number of Cylinders</label>
+            <select id="b-qty">
+              <option value="1">1 Cylinder</option>
+              <option value="2">2 Cylinders</option>
+              <option value="3">3 Cylinders</option>
+              <option value="4">4 Cylinders</option>
+              <option value="5">5 Cylinders</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Delivery Date</label>
+            <input type="date" id="b-date">
+          </div>
+          <div class="form-group">
+            <label>Delivery Address</label>
+            <input type="text" id="b-addr" placeholder="Full delivery address">
+          </div>
+          <button class="btn btn-primary" onclick="openPayment()">Proceed to Payment</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY BOOKINGS -->
+    <div id="sec-bookings" class="hidden">
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">My Bookings</span></div>
+        <div style="overflow-x:auto">
+          <table class="p-table">
+            <thead><tr><th>#</th><th>Date</th><th>Cylinders</th><th>Agency</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="my-bookings-body"><tr><td colspan="6" style="padding:20px;text-align:center"><span class="spinner"></span></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY QR CODES -->
+    <div id="sec-qrcodes" class="hidden">
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">My Delivery QR Codes</span></div>
+        <div class="p-card-body">
+          <p style="color:#6b7280;font-size:13px;margin-bottom:16px">Show this QR code to the delivery agent to confirm receipt of your cylinders.</p>
+          <div id="qr-list"><div class="spinner"></div> Loading...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal">
+    <div class="modal-header">Complete Payment</div>
+    <div class="modal-body">
+      <div id="pay-step-select">
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px">Select a payment method to continue:</p>
+        <div class="pay-options">
+          <div class="pay-option" onclick="selectPay('upi')">
+            <span class="pay-option-icon">&#128242;</span>
+            <div><div style="font-weight:600">UPI Payment</div><div style="font-size:12px;color:#6b7280">Pay via any UPI app</div></div>
+          </div>
+          <div class="pay-option" onclick="selectPay('card')">
+            <span class="pay-option-icon">&#128179;</span>
+            <div><div style="font-weight:600">Card Payment</div><div style="font-size:12px;color:#6b7280">Debit or credit card</div></div>
+          </div>
+          <div class="pay-option" onclick="selectPay('cod')">
+            <span class="pay-option-icon">&#128176;</span>
+            <div><div style="font-weight:600">Cash on Delivery</div><div style="font-size:12px;color:#6b7280">Pay when delivered</div></div>
+          </div>
+        </div>
+        <button class="btn btn-outline" onclick="closePayment()">Cancel</button>
+      </div>
+
+      <div id="pay-step-upi" class="hidden">
+        <p style="font-size:13px;margin-bottom:16px;color:#374151">Scan the QR code or enter UPI ID to pay:</p>
+        <div style="text-align:center;padding:20px;background:#f9fafb;border-radius:8px;margin-bottom:16px">
+          <div style="font-size:40px;margin-bottom:8px">&#128242;</div>
+          <div style="font-size:13px;color:#6b7280">UPI ID: lpg@distribution</div>
+        </div>
+        <div class="form-group"><label>Your UPI ID</label><input type="text" id="upi-id" placeholder="yourname@upi"></div>
+        <button class="btn btn-primary" onclick="confirmBooking('upi')">Confirm Payment</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="backToPay()">Back</button>
+      </div>
+
+      <div id="pay-step-card" class="hidden">
+        <div class="form-group"><label>Card Number</label><input type="text" placeholder="1234 5678 9012 3456" maxlength="19"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Expiry</label><input type="text" placeholder="MM/YY"></div>
+          <div class="form-group"><label>CVV</label><input type="text" placeholder="123" maxlength="3"></div>
+        </div>
+        <div class="form-group"><label>Cardholder Name</label><input type="text" placeholder="Name on card"></div>
+        <button class="btn btn-primary" onclick="confirmBooking('card')">Pay Now</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="backToPay()">Back</button>
+      </div>
+
+      <div id="pay-step-cod" class="hidden">
+        <div style="text-align:center;padding:24px;background:#f9fafb;border-radius:10px;margin-bottom:16px">
+          <div style="font-size:40px;margin-bottom:10px">&#128176;</div>
+          <div style="font-weight:600;font-size:15px;color:#111827">Cash on Delivery</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:6px">Please keep <strong id="cod-amount">Rs. 950</strong> ready when the delivery agent arrives.</div>
+        </div>
+        <button class="btn btn-primary" onclick="confirmBooking('cod')">Confirm Booking</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="backToPay()">Back</button>
+      </div>
+
+      <div id="pay-step-done" class="hidden" style="text-align:center;padding:20px">
+        <div style="font-size:48px;margin-bottom:16px">&#9989;</div>
+        <div style="font-size:18px;font-weight:700;color:#111827;margin-bottom:8px">Booking Confirmed!</div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Your booking has been placed successfully.</div>
+        <button class="btn btn-primary" onclick="closePayment();showSection('bookings')">View My Bookings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+var BASE = window.location.origin;
+var consumerToken = null;
+var consumerData = null;
+var consumerToken = localStorage.getItem('consumer_token') || null;
+try { consumerData = JSON.parse(localStorage.getItem('consumer_user') || 'null'); } catch(e) {}
+
+// ── Toast ─────────────────────────────────
+function toast(msg, type) {
+  type = type || 'success';
+  var el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = '<span>' + msg + '</span>';
+  var w = document.getElementById('toast-container');
+  w.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('show'); });
+  setTimeout(function() { el.classList.remove('show'); setTimeout(function() { el.remove(); }, 350); }, 3500);
+}
+
+// ── Auth ──────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('auth-msg').innerHTML = '';
+  document.getElementById('auth-msg').className = '';
+  if (tab === 'login') {
+    document.getElementById('login-form').classList.remove('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+    document.querySelectorAll('.auth-tab')[0].classList.add('active');
+    document.querySelectorAll('.auth-tab')[1].classList.remove('active');
+  } else {
+    document.getElementById('login-form').classList.add('hidden');
+    document.getElementById('register-form').classList.remove('hidden');
+    document.querySelectorAll('.auth-tab')[0].classList.remove('active');
+    document.querySelectorAll('.auth-tab')[1].classList.add('active');
+    loadAgencies();
+  }
+}
+
+function setMsg(msg, type) {
+  var el = document.getElementById('auth-msg');
+  el.textContent = msg;
+  el.className = type || 'error';
+}
+
+async function loadAgencies() {
+  try {
+    var res = await fetch(BASE + '/agencies/?page_size=100');
+    var data = await res.json();
+    var agencies = data.results || data || [];
+    var sel = document.getElementById('r-agency');
+    sel.innerHTML = '<option value="">Select agency...</option>' +
+      agencies.map(function(a) { return '<option value="' + a.agency_id + '">' + a.agency_name + '</option>'; }).join('');
+  } catch(e) {}
+}
+
+async function doLogin() {
+  var phone = document.getElementById('l-phone').value.trim();
+  var pass  = document.getElementById('l-pass').value;
+  if (!phone || !pass) { setMsg('Please enter phone and password.'); return; }
+  try {
+    var res = await fetch(BASE + '/auth/consumer/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone, password: pass })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Login failed');
+    consumerToken = data.access_token;
+    localStorage.setItem('consumer_token', data.access_token);
+    localStorage.setItem('consumer_user', JSON.stringify(data));
+    consumerData  = data;
+    enterPortal(data);
+  } catch(e) { setMsg(e.message); }
+}
+
+async function doRegister() {
+  var name   = document.getElementById('r-name').value.trim();
+  var phone  = document.getElementById('r-phone').value.trim();
+  var addr   = document.getElementById('r-addr').value.trim();
+  var type   = document.getElementById('r-type').value;
+  var agency = document.getElementById('r-agency').value;
+  var pass   = document.getElementById('r-pass').value;
+  var pass2  = document.getElementById('r-pass2').value;
+  if (!name || !phone || !addr || !agency || !pass) { setMsg('Please fill in all required fields.'); return; }
+  if (pass !== pass2) { setMsg('Passwords do not match.'); return; }
+  if (pass.length < 6) { setMsg('Password must be at least 6 characters.'); return; }
+  try {
+    var res = await fetch(BASE + '/auth/consumer/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: name, phone: phone, address: addr, consumer_type: type, agency_id: parseInt(agency), password: pass })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Registration failed');
+    setMsg('Account created! Please sign in.', 'success');
+    setTimeout(function() { switchTab('login'); }, 1500);
+  } catch(e) { setMsg(e.message); }
+}
+
+function enterPortal(data) {
+  document.body.className = 'portal-mode';
+  document.getElementById('auth-section').classList.add('hidden');
+  document.getElementById('portal-section').classList.remove('hidden');
+  document.getElementById('nav-name').textContent = data.full_name || 'User';
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('b-date').value = today;
+  if (data.address) document.getElementById('b-addr').value = data.address;
+  loadHome();
+}
+
+function doLogout() {
+  consumerToken = null; consumerData = null; localStorage.removeItem('consumer_token'); localStorage.removeItem('consumer_user');
+  document.body.className = 'auth-mode';
+  document.getElementById('auth-section').classList.remove('hidden');
+  document.getElementById('portal-section').classList.add('hidden');
+}
+
+// ── Portal sections ───────────────────────
+function showSection(name) {
+  ['home','book','bookings','qrcodes'].forEach(function(s) {
+    document.getElementById('sec-' + s).classList.add('hidden');
+  });
+  document.getElementById('sec-' + name).classList.remove('hidden');
+  document.querySelectorAll('.portal-tab').forEach(function(t) { t.classList.remove('active'); });
+  var idx = { home:0, book:1, bookings:2, qrcodes:3 };
+  document.querySelectorAll('.portal-tab')[idx[name]].classList.add('active');
+  if (name === 'home') loadHome();
+  if (name === 'bookings') loadMyBookings();
+  if (name === 'qrcodes') loadMyQRs();
+  if (name === 'book') {
+    var di = document.getElementById('b-date');
+    if (di && !di.value) {
+      di.value = new Date().toISOString().split('T')[0];
+    }
+    var ai = document.getElementById('b-addr');
+    if (ai && !ai.value && consumerData && consumerData.address) {
+      ai.value = consumerData.address;
+    }
+  }
+}
+
+async function authFetch(path, opts) {
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers['Authorization'] = 'Bearer ' + (consumerToken || localStorage.getItem('consumer_token'));
+  if (!opts.headers['Content-Type'] && opts.body) opts.headers['Content-Type'] = 'application/json';
+  var res = await fetch(BASE + path, opts);
+  var data = await res.json().catch(function() { return {}; });
+  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : (data.detail?.[0]?.msg || data.message || ("Error " + res.status)));
+  return data;
+}
+
+async function loadHome() {
+  try {
+    var data = await authFetch('/auth/consumer/me');
+    var bookings = await authFetch('/bookings/?consumer_id=' + consumerData.consumer_id + '&page_size=20').catch(function() { return {results:[]}; });
+    var rows = bookings.results || bookings || [];
+    var total = rows.length;
+    var delivered = rows.filter(function(b) { return b.status === 'delivered'; }).length;
+    var pending   = rows.filter(function(b) { return b.status === 'pending' || b.status === 'allocated'; }).length;
+    var cancelled = rows.filter(function(b) { return b.status === 'cancelled'; }).length;
+    document.getElementById('home-stats').innerHTML =
+      '<div class="p-stat"><div class="p-stat-val">' + total + '</div><div class="p-stat-label">Total Bookings</div></div>' +
+      '<div class="p-stat"><div class="p-stat-val">' + delivered + '</div><div class="p-stat-label">Delivered</div></div>' +
+      '<div class="p-stat"><div class="p-stat-val">' + pending + '</div><div class="p-stat-label">Pending</div></div>' +
+      '<div class="p-stat"><div class="p-stat-val">' + cancelled + '</div><div class="p-stat-label">Cancelled</div></div>';
+    document.getElementById('home-profile').innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">' +
+      '<div><span style="color:#6b7280">Name:</span> <strong>' + (data.full_name || '--') + '</strong></div>' +
+      '<div><span style="color:#6b7280">Phone:</span> <strong>' + (data.phone || '--') + '</strong></div>' +
+      '<div><span style="color:#6b7280">Type:</span> <strong style="text-transform:capitalize">' + (data.consumer_type || '--') + '</strong></div>' +
+      '<div><span style="color:#6b7280">Address:</span> <strong>' + (data.address || '--') + '</strong></div>' +
+      '</div>';
+    document.getElementById('home-bookings').innerHTML = rows.length
+      ? rows.map(function(b) {
+          var badge = { pending:'p-badge-pending', allocated:'p-badge-allocated', delivered:'p-badge-delivered', cancelled:'p-badge-cancelled' };
+          return '<tr><td>#' + b.booking_id + '</td><td>' + (b.booking_date ? b.booking_date.split('T')[0] : '--') + '</td><td>' + b.cylinders_requested + '</td><td><span class="p-badge ' + (badge[b.status] || '') + '">' + b.status + '</span></td><td>' + (b.delivery_date || '--') + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#6b7280">No bookings yet</td></tr>';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function loadMyBookings() {
+  document.getElementById('my-bookings-body').innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center"><span class="spinner"></span></td></tr>';
+  try {
+    var data = await authFetch('/bookings/?consumer_id=' + consumerData.consumer_id + '&page_size=20');
+    var rows = data.results || data || [];
+    document.getElementById('my-bookings-body').innerHTML = rows.length
+      ? rows.map(function(b) {
+          var badge = { pending:'p-badge-pending', allocated:'p-badge-allocated', delivered:'p-badge-delivered', cancelled:'p-badge-cancelled' };
+          var cancelBtn = (b.status === 'pending') ? '<button class="btn btn-sm btn-danger" onclick="cancelBooking(' + b.booking_id + ')">Cancel</button>' : '--';
+          return '<tr><td>#' + b.booking_id + '</td><td>' + (b.booking_date ? b.booking_date.split('T')[0] : '--') + '</td><td>' + b.cylinders_requested + '</td><td>' + (b.agency_name || '--') + '</td><td><span class="p-badge ' + (badge[b.status] || '') + '">' + b.status + '</span></td><td>' + cancelBtn + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="6" style="padding:20px;text-align:center;color:#6b7280">No bookings yet</td></tr>';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function cancelBooking(id) {
+  if (!confirm('Cancel booking #' + id + '?')) return;
+  try {
+    await authFetch('/bookings/' + id + '/cancel', { method: 'POST', body: JSON.stringify({}) });
+    toast('Booking cancelled');
+    loadMyBookings();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function loadMyQRs() {
+  document.getElementById('qr-list').innerHTML = '<span class="spinner"></span> Loading...';
+  try {
+    var data = await authFetch('/bookings/?consumer_id=' + consumerData.consumer_id + '&page_size=20');
+    var rows = (data.results || data || []).filter(function(b) { return b.status === 'allocated' || b.status === 'delivered'; });
+    if (!rows.length) {
+      document.getElementById('qr-list').innerHTML = '<div class="empty-state"><div class="empty-icon">&#128241;</div><p>No QR codes yet. QR codes appear after your booking is allocated.</p></div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < rows.length; i++) {
+      var b = rows[i];
+      try {
+        var qrRes = await fetch('/qr/' + b.booking_id); var qr = await qrRes.json();
+        var badge = b.status === 'delivered' ? '<span class="p-badge p-badge-delivered">Delivered</span>' : '<span class="p-badge p-badge-allocated">Allocated</span>';
+        html += '<div class="qr-card">' +
+          '<img class="qr-img" src="' + (qr.qr_image_base64 || '') + '" alt="QR Code">' +
+          '<div style="flex:1">' +
+          '<div style="font-weight:600;margin-bottom:4px">Booking #' + b.booking_id + '</div>' +
+          '<div style="font-size:12px;color:#6b7280;margin-bottom:8px">' + b.cylinders_requested + ' cylinder(s) &bull; ' + (b.agency_name || '--') + '</div>' +
+          badge +
+          '<div style="margin-top:10px"><a href="' + BASE + '/qr/' + b.booking_id + '/download" target="_blank" class="btn btn-sm btn-outline" style="width:auto;display:inline-flex">Download QR</a></div>' +
+          '</div></div>';
+      } catch(e) {
+        html += '<div class="qr-card"><div style="color:#6b7280;font-size:13px">QR not yet generated for booking #' + b.booking_id + '</div></div>';
+      }
+    }
+    document.getElementById('qr-list').innerHTML = html;
+  } catch(e) { document.getElementById('qr-list').innerHTML = '<p style="color:#dc2626">Failed to load QR codes.</p>'; }
+}
+
+// ── Payment flow ──────────────────────────
+var selectedPay = null;
+
+function openPayment() {
+  var qty  = document.getElementById('b-qty').value;
+  var date = document.getElementById('b-date').value;
+  var addr = document.getElementById('b-addr').value.trim();
+  if (!date || !addr) { toast('Please fill delivery date and address', 'error'); return; }
+  document.getElementById('cod-amount').textContent = 'Rs. ' + (parseInt(qty) * 950);
+  document.getElementById('payment-modal').classList.add('open');
+  showPayStep('select');
+}
+
+function closePayment() {
+  document.getElementById('payment-modal').classList.remove('open');
+  selectedPay = null;
+}
+
+function showPayStep(step) {
+  ['select','upi','card','cod','done'].forEach(function(s) {
+    document.getElementById('pay-step-' + s).classList.add('hidden');
+  });
+  document.getElementById('pay-step-' + step).classList.remove('hidden');
+}
+
+function selectPay(method) {
+  selectedPay = method;
+  showPayStep(method);
+}
+
+function backToPay() { showPayStep('select'); }
+
+async function confirmBooking(method) {
+  var qty  = parseInt(document.getElementById('b-qty').value);
+  var date = document.getElementById('b-date').value;
+  var addr = document.getElementById('b-addr').value.trim();
+  try {
+    var booking = await authFetch('/bookings/', {
+      method: 'POST',
+      body: JSON.stringify({ consumer_id: parseInt(consumerData.consumer_id), agency_id: parseInt(consumerData.agency_id), cylinders_requested: parseInt(qty), booking_date: date })
+    });
+    showPayStep('done');
+    toast('Booking confirmed!');
+  } catch(e) {
+    toast(e.message, 'error');
+    closePayment();
+  }
+}
+
+// Close modal on overlay click
+document.getElementById('payment-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePayment();
+});
+
+// Load agencies for register on page load
+loadAgencies();
+</script>
+</body>
+</html>
+
+

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delivery Agents - LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+/* Extending main.css to support modal styling properly */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000;
+  align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal-content {
+  background: #0e0e1c; border: 1px solid rgba(255,255,255,0.07); border-radius: 18px;
+  width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); overflow: hidden;
+  position: relative; color: #ddddf0;
+}
+.modal-content::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent);
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;
+}
+.modal-body { padding: 20px 24px; }
+.modal-footer {
+  padding: 14px 24px 20px; border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block; font-size: 11px; font-weight: 600; color: rgba(221,221,240,0.4);
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em;
+}
+.form-group input, .form-group select {
+  width: 100%; padding: 10px 12px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ddddf0;
+  outline: none; font-size: 13.5px;
+}
+.form-group input:focus, .form-group select:focus {
+  border-color: rgba(99,102,241,0.5);
+}
+.form-group select option { background: #0e0e1c; color: #ddddf0; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Delivery Agents</div>
+        <div class="page-sub">Register, track and manage delivery personnel</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openAddAgentModal()"><i class="ti ti-user-plus"></i> Add Agent</button>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Agency ID</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="agents-tbody">
+            <tr><td colspan="7" class="empty-state"><span class="spinner"></span> Loading agents...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ADD AGENT MODAL -->
+<div class="modal-overlay" id="add-agent-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span style="font-weight:600">Register New Delivery Agent</span>
+      <button onclick="closeAddAgentModal()" style="background:none;border:none;color:rgba(221,221,240,0.5);font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="agent-name" placeholder="Enter full name" required>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="agent-phone" placeholder="10-digit mobile number" maxlength="10" required>
+      </div>
+      <div class="form-group">
+        <label>Assigned Agency</label>
+        <select id="agent-agency-select">
+          <option value="">Loading agencies...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="agent-password" placeholder="Create agent password" required>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeAddAgentModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddAgent()">Register Agent</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+requireAuth();
+renderSidebar('agents');
+
+var agenciesCache = [];
+
+async function loadAgents() {
+  try {
+    var agents = await api.get('/admin/delivery-agents');
+    var tbody = document.getElementById('agents-tbody');
+    tbody.innerHTML = agents.length ? agents.map(function(a) {
+      var statusBadge = a.is_active ? 
+        '<span class="badge badge-active">Active</span>' : 
+        '<span class="badge badge-inactive">Inactive</span>';
+      
+      var deactBtn = a.is_active ? 
+        '<button class="btn btn-sm btn-danger" onclick="deactivateAgent(' + a.agent_id + ')">Deactivate</button>' : 
+        '<span style="color:#64748b;font-size:12px">Deactivated</span>';
+      
+      return '<tr>' +
+        '<td>#' + a.agent_id + '</td>' +
+        '<td><strong>' + a.full_name + '</strong></td>' +
+        '<td>' + a.phone + '</td>' +
+        '<td>Agency #' + a.agency_id + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td>' + fmtDate(a.created_at) + '</td>' +
+        '<td>' + deactBtn + '</td>' +
+      '</tr>';
+    }).join('') : emptyRow('No delivery agents registered.');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function loadAgencies() {
+  try {
+    var res = await api.get('/agencies/?page_size=100');
+    agenciesCache = res.results || res.agencies || res || [];
+    var select = document.getElementById('agent-agency-select');
+    select.innerHTML = agenciesCache.length ? agenciesCache.map(function(a) {
+      return '<option value="' + a.agency_id + '">' + a.agency_name + ' (' + (a.region || 'No Region') + ')</option>';
+    }).join('') : '<option value="">No agencies available</option>';
+  } catch(e) {
+    console.error('Error loading agencies: ' + e.message);
+  }
+}
+
+function openAddAgentModal() {
+  document.getElementById('add-agent-modal').classList.add('open');
+  loadAgencies();
+}
+
+function closeAddAgentModal() {
+  document.getElementById('add-agent-modal').classList.remove('open');
+  // Reset inputs
+  document.getElementById('agent-name').value = '';
+  document.getElementById('agent-phone').value = '';
+  document.getElementById('agent-password').value = '';
+}
+
+async function submitAddAgent() {
+  var name = document.getElementById('agent-name').value.trim();
+  var phone = document.getElementById('agent-phone').value.trim();
+  var agencyId = document.getElementById('agent-agency-select').value;
+  var password = document.getElementById('agent-password').value;
+
+  if (!name || !phone || !agencyId || !password) {
+    toast('Please fill out all fields.', 'error');
+    return;
+  }
+
+  if (!/^\d{10}$/.test(phone)) {
+    toast('Please enter a valid 10-digit phone number.', 'error');
+    return;
+  }
+
+  try {
+    await api.post('/admin/delivery-agents', {
+      full_name: name,
+      phone: phone,
+      agency_id: parseInt(agencyId),
+      password: password
+    });
+    toast('Delivery agent registered successfully!', 'success');
+    closeAddAgentModal();
+    loadAgents();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function deactivateAgent(agentId) {
+  if (!confirm('Deactivate delivery agent #' + agentId + '? They will no longer be able to log in.')) return;
+  try {
+    await api.delete('/admin/delivery-agents/' + agentId);
+    toast('Delivery agent deactivated.', 'success');
+    loadAgents();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// Load initially
+loadAgents();
+</script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html><html lang="en"><head>  <meta charset="UTF-8">  <meta name="viewport" content="width=device-width, initial-scale=1.0">  <title>LPG System — Login</title>  <link rel="preconnect" href="https://fonts.googleapis.com">  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">  <style>    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }    :root {      --bg: #08080f;      --surface: #0e0e1c;      --border: rgba(255,255,255,0.07);      --text: #ddddf0;      --muted: rgba(221,221,240,0.35);      --admin: #6366f1;      --consumer: #14b8a6;      --agent: #f59e0b;    }    body {      font-family: 'DM Sans', sans-serif;      background: var(--bg);      min-height: 100vh;      display: flex;      align-items: center;      justify-content: center;      padding: 24px;      overflow: hidden;      position: relative;    }    .blob1 {      position: fixed; top: -200px; left: -200px;      width: 600px; height: 600px;      background: radial-gradient(circle, rgba(99,102,241,0.09) 0%, transparent 65%);      pointer-events: none;    }    .blob2 {      position: fixed; bottom: -200px; right: -200px;      width: 500px; height: 500px;      background: radial-gradient(circle, rgba(20,184,166,0.07) 0%, transparent 65%);      pointer-events: none;    }    .wrapper {      width: 100%; max-width: 400px;      animation: rise 0.45s cubic-bezier(0.34,1.3,0.64,1) both;    }    @keyframes rise {      from { opacity:0; transform:translateY(20px); }      to   { opacity:1; transform:translateY(0); }    }    .brand {      display: flex; align-items: center; gap: 12px;      margin-bottom: 32px; justify-content: center;    }    .brand-icon {      width: 38px; height: 38px; border-radius: 10px;      background: var(--admin);      display: grid; place-items: center;      box-shadow: 0 0 22px rgba(99,102,241,0.3);      transition: background 0.4s, box-shadow 0.4s;    }    .brand-icon.consumer { background: var(--consumer); box-shadow: 0 0 22px rgba(20,184,166,0.25); }    .brand-icon.agent { background: var(--agent); box-shadow: 0 0 22px rgba(245,158,11,0.25); }    .brand-name { font-size: 17px; font-weight: 600; color: var(--text); }    .brand-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }    .card {      background: var(--surface);      border: 1px solid var(--border);      border-radius: 20px;      overflow: hidden;      position: relative;    }    .card-glow {      position: absolute; top: 0; left: 0; right: 0; height: 1px;      transition: background 0.4s;    }    .card-glow.admin    { background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent); }    .card-glow.consumer { background: linear-gradient(90deg, transparent, rgba(20,184,166,0.6), transparent); }    .card-glow.agent    { background: linear-gradient(90deg, transparent, rgba(245,158,11,0.6), transparent); }    .card-head {      padding: 22px 26px 18px;      border-bottom: 1px solid var(--border);      transition: background 0.4s;    }    .card-head.admin    { background: rgba(99,102,241,0.07); }    .card-head.consumer { background: rgba(20,184,166,0.07); }    .card-head.agent    { background: rgba(245,158,11,0.07); }    .card-head-title {      font-size: 16px; font-weight: 600; color: var(--text);      display: flex; align-items: center; gap: 9px; margin-bottom: 3px;    }    .card-head-title i { font-size: 18px; transition: color 0.4s; }    .card-head-title i.admin    { color: #a5b4fc; }    .card-head-title i.consumer { color: #5eead4; }    .card-head-title i.agent    { color: #fbbf24; }    .card-head-desc { font-size: 12px; color: var(--muted); }    .card-body { padding: 22px 26px 24px; }    .msg { min-height: 34px; margin-bottom: 12px; }    .msg-error, .msg-success {      display: flex; align-items: center; gap: 7px;      padding: 8px 12px; border-radius: 8px; font-size: 12.5px;      animation: fadeIn 0.2s ease;    }    .msg-error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2);  color: #f87171; }    .msg-success { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2); color: #34d399; }    @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; } }    .field { margin-bottom: 14px; }    label {      display: block; font-size: 10px; font-weight: 600;      letter-spacing: 0.09em; text-transform: uppercase;      color: rgba(221,221,240,0.28); margin-bottom: 7px;      font-family: 'DM Mono', monospace;    }    .input-wrap { position: relative; }    .input-wrap i {      position: absolute; left: 13px; top: 50%;      transform: translateY(-50%); font-size: 15px;      color: rgba(221,221,240,0.2); pointer-events: none;      transition: color 0.2s;    }    .input-wrap:focus-within i { color: rgba(221,221,240,0.5); }    input {      width: 100%; padding: 11px 13px 11px 40px;      background: rgba(255,255,255,0.04);      border: 1px solid rgba(255,255,255,0.08);      border-radius: 10px; font-size: 13.5px;      font-family: 'DM Sans', sans-serif; color: var(--text);      outline: none; transition: border-color 0.2s, background 0.2s;    }    input::placeholder { color: rgba(221,221,240,0.18); }    input.admin:focus    { border-color: rgba(99,102,241,0.5);  background: rgba(99,102,241,0.05); }    input.consumer:focus { border-color: rgba(20,184,166,0.5);  background: rgba(20,184,166,0.05); }    input.agent:focus    { border-color: rgba(245,158,11,0.5);  background: rgba(245,158,11,0.05); }    .btn-submit {      width: 100%; padding: 12.5px; border: none; border-radius: 10px;      font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif;      cursor: pointer; display: flex; align-items: center; justify-content: center;      gap: 8px; margin-top: 6px;      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;    }    .btn-submit:hover  { opacity: 0.88; transform: translateY(-1px); }    .btn-submit:active { transform: scale(0.98); }    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }    .btn-submit.admin {      background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff;      box-shadow: 0 4px 20px rgba(99,102,241,0.3);    }    .btn-submit.consumer {      background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff;      box-shadow: 0 4px 20px rgba(20,184,166,0.25);    }    .btn-submit.agent {      background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff;      box-shadow: 0 4px 20px rgba(245,158,11,0.25);    }    .spinner {      width: 15px; height: 15px;      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;      border-radius: 50%; animation: spin 0.7s linear infinite;      display: none; flex-shrink: 0;    }    @keyframes spin { to { transform: rotate(360deg); } }    .register-link {      text-align: center; margin-top: 14px;      font-size: 12px; color: var(--muted);    }    .register-link a { color: #5eead4; text-decoration: none; font-weight: 500; }    .register-link a:hover { text-decoration: underline; }
+    #panel-agent .register-link a { color: #fbbf24; }    .toggle-wrap {      margin-top: 22px;      display: flex;      align-items: center;      justify-content: center;    }    .toggle-pill {      display: flex;      align-items: center;      background: rgba(255,255,255,0.04);      border: 1px solid rgba(255,255,255,0.08);      border-radius: 50px;      padding: 4px;      gap: 2px;      position: relative;    }    .toggle-option {      display: flex; align-items: center; gap: 7px;      padding: 8px 18px; border-radius: 50px;      font-size: 12.5px; font-weight: 500;      cursor: pointer; border: none; background: transparent;      color: rgba(221,221,240,0.4); font-family: 'DM Sans', sans-serif;      transition: color 0.25s;      position: relative; z-index: 1;    }    .toggle-option i { font-size: 15px; }    .toggle-option.active-admin    { color: #a5b4fc; }    .toggle-option.active-consumer { color: #5eead4; }    .toggle-option.active-agent    { color: #fbbf24; }    .toggle-indicator {      position: absolute;      top: 4px; bottom: 4px;      border-radius: 50px;      transition: left 0.3s cubic-bezier(0.34,1.2,0.64,1), width 0.3s, background 0.4s;      z-index: 0;    }    .toggle-indicator.admin    { background: rgba(99,102,241,0.18); border: 1px solid rgba(99,102,241,0.25); }    .toggle-indicator.consumer { background: rgba(20,184,166,0.15); border: 1px solid rgba(20,184,166,0.25); }    .toggle-indicator.agent    { background: rgba(245,158,11,0.18); border: 1px solid rgba(245,158,11,0.25); }    .page-footer {      text-align: center; margin-top: 20px;      font-size: 10.5px; color: rgba(221,221,240,0.1);      font-family: 'DM Mono', monospace; letter-spacing: 0.04em;    }    .panel { display: none; }    .panel.active { display: block; }
+    .whatsapp-booking-box {
+      margin-top: 18px;
+      padding: 12px;
+      border: 1px dashed rgba(37, 211, 102, 0.25);
+      border-radius: 12px;
+      background: rgba(37, 211, 102, 0.04);
+      text-align: center;
+    }
+    .wa-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(37, 211, 102, 0.3);
+      background: rgba(37, 211, 102, 0.1);
+      color: #25d366;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+    .wa-btn:hover {
+      background: rgba(37, 211, 102, 0.2);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.15);
+    }
+  </style></head><body><style>body{visibility:hidden}</style>
+<div class="blob1"></div>
+<div class="blob2"></div>
+<div class="wrapper">
+  <div class="brand">
+    <div class="brand-icon" id="brand-icon">
+      <svg width="20" height="20" viewBox="0 0 34 34" fill="none">
+        <rect x="2" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,0.9)"/>
+        <rect x="19" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,0.5)"/>
+        <rect x="2" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,0.5)"/>
+        <rect x="19" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,0.25)"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">LPG Distribution System</div>
+      <div class="brand-sub">Priority-based cylinder allocation & delivery</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-glow admin" id="card-glow"></div>
+    <!-- ADMIN PANEL -->
+    <div class="panel active" id="panel-admin">
+      <div class="card-head admin">
+        <div class="card-head-title"><i class="ti ti-shield-lock admin"></i> Admin Portal</div>
+        <div class="card-head-desc">Manage agencies, consumers, allocations and supply</div>
+      </div>
+      <div class="card-body">
+        <div class="msg" id="admin-msg"></div>
+        <div class="field">
+          <label>Username</label>
+          <div class="input-wrap"><i class="ti ti-user"></i><input type="text" id="admin-username" class="admin" placeholder="Enter username" autocomplete="username"/></div>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="input-wrap"><i class="ti ti-lock"></i><input type="password" id="admin-password" class="admin" placeholder="Enter password" autocomplete="current-password"/></div>
+        </div>
+        <button class="btn-submit admin" id="admin-btn" onclick="doAdminLogin()">
+          <div class="spinner" id="admin-spinner"></div>
+          <span id="admin-label">Sign In as Admin</span>
+        </button>
+      </div>
+    </div>
+    <!-- CONSUMER PANEL -->
+    <div class="panel" id="panel-consumer">
+      <div class="card-head consumer">
+        <div class="card-head-title"><i class="ti ti-user-circle consumer"></i> Consumer Portal</div>
+        <div class="card-head-desc">Book cylinders, track deliveries, view QR codes</div>
+      </div>
+      <div class="card-body">
+        <div class="msg" id="consumer-msg"></div>
+        <div class="field">
+          <label>Phone Number</label>
+          <div class="input-wrap"><i class="ti ti-phone"></i><input type="tel" id="consumer-phone" class="consumer" placeholder="10-digit phone number" maxlength="10" autocomplete="tel"/></div>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="input-wrap"><i class="ti ti-lock"></i><input type="password" id="consumer-password" class="consumer" placeholder="Your password" autocomplete="current-password"/></div>
+        </div>
+        <button class="btn-submit consumer" id="consumer-btn" onclick="doConsumerLogin()">
+          <div class="spinner" id="consumer-spinner"></div>
+          <span id="consumer-label">Sign In as Consumer</span>
+        </button>
+        <div class="register-link">New here? <a href="/register">Create a Consumer Account</a></div>
+        
+        <div class="whatsapp-booking-box">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="ti ti-brand-whatsapp" style="color:#25d366;font-size:15px"></i> Portal Down? Book via WhatsApp
+          </div>
+          <div style="margin-bottom:8px;">
+            <input type="tel" id="wa-phone-landing" placeholder="Optional: WhatsApp Number (e.g. 9876543210)" style="padding:8px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:var(--text);width:100%;outline:none;font-family:inherit;" oninput="updateLandingWALink()"/>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <a href="https://api.whatsapp.com/send?text=Hi!%20The%20website%20is%20down.%20I%20want%20to%20book%20an%20LPG%20cylinder.%20My%20registered%20phone%20number%20is%3A%20" id="wa-link-landing" target="_blank" class="wa-btn" style="flex-grow:1;">
+              <i class="ti ti-brand-whatsapp"></i> Book via WA
+            </a>
+            <button class="wa-btn" style="width:auto;flex-shrink:0;padding:8px 10px;background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--text2);" onclick="copyLandingWAText()" title="Copy booking message to clipboard">
+              <i class="ti ti-copy"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- DELIVERY AGENT PANEL -->
+    <div class="panel" id="panel-agent">
+      <div class="card-head agent">
+        <div class="card-head-title"><i class="ti ti-truck agent"></i> Delivery Agent Portal</div>
+        <div class="card-head-desc">View assigned tasks, update progress & chat with consumers</div>
+      </div>
+      <div class="card-body">
+        <div class="msg" id="agent-msg"></div>
+        <div class="field">
+          <label>Phone Number</label>
+          <div class="input-wrap"><i class="ti ti-phone"></i><input type="tel" id="agent-phone" class="agent" placeholder="10-digit phone number" maxlength="10" autocomplete="tel"/></div>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="input-wrap"><i class="ti ti-lock"></i><input type="password" id="agent-password" class="agent" placeholder="Your password" autocomplete="current-password"/></div>
+        </div>
+        <button class="btn-submit agent" id="agent-btn" onclick="doAgentLogin()">
+          <div class="spinner" id="agent-spinner"></div>
+          <span id="agent-label">Sign In as Agent</span>
+        </button>
+        <div class="register-link">New here? <a href="/register?role=agent">Create a Delivery Agent Account</a></div>
+      </div>
+    </div>
+  </div>
+  <div class="toggle-wrap">
+    <div class="toggle-pill" id="toggle-pill">
+      <div class="toggle-indicator admin" id="toggle-indicator"></div>
+      <button class="toggle-option active-admin" id="opt-admin" onclick="setMode('admin')"><i class="ti ti-shield-lock"></i> Admin</button>
+      <button class="toggle-option" id="opt-consumer" onclick="setMode('consumer')"><i class="ti ti-user-circle"></i> Consumer</button>
+      <button class="toggle-option" id="opt-agent" onclick="setMode('agent')"><i class="ti ti-truck"></i> Agent</button>
+    </div>
+  </div>
+  <div class="page-footer">LPG Distribution Management System</div>
+</div>
+<script>
+  let mode = 'admin';
+  function setMode(m) {
+    if (mode === m) return;
+    mode = m;
+    const isAdmin = m === 'admin';
+    const isConsumer = m === 'consumer';
+    const isAgent = m === 'agent';
+    document.getElementById('panel-admin').className    = 'panel' + (isAdmin ? ' active' : '');
+    document.getElementById('panel-consumer').className = 'panel' + (isConsumer ? ' active' : '');
+    document.getElementById('panel-agent').className    = 'panel' + (isAgent ? ' active' : '');
+    document.getElementById('card-glow').className = 'card-glow ' + m;
+    document.getElementById('brand-icon').className = 'brand-icon' + (isAdmin ? '' : (isConsumer ? ' consumer' : ' agent'));
+    
+    const optAdmin = document.getElementById('opt-admin');
+    const optCons  = document.getElementById('opt-consumer');
+    const optAgent = document.getElementById('opt-agent');
+    const ind = document.getElementById('toggle-indicator');
+    const active = isAdmin ? optAdmin : (isConsumer ? optCons : optAgent);
+    ind.style.left  = active.offsetLeft + 'px';
+    ind.style.width = active.offsetWidth + 'px';
+    ind.className = 'toggle-indicator ' + m;
+    
+    optAdmin.className = 'toggle-option' + (isAdmin ? ' active-admin' : '');
+    optCons.className  = 'toggle-option' + (isConsumer ? ' active-consumer' : '');
+    optAgent.className = 'toggle-option' + (isAgent ? ' active-agent' : '');
+    
+    document.getElementById('admin-msg').innerHTML    = '';
+    document.getElementById('consumer-msg').innerHTML = '';
+    document.getElementById('agent-msg').innerHTML    = '';
+  }
+  
+  document.body.style.visibility="visible"; window.addEventListener("load", () => {
+    const params = new URLSearchParams(location.search);
+    if(params.get("role")==="consumer"){
+      document.getElementById("toggle-pill") && (document.getElementById("toggle-pill").style.display="none");
+      setMode("consumer");
+    } else if(params.get("role")==="agent"){
+      document.getElementById("toggle-pill") && (document.getElementById("toggle-pill").style.display="none");
+      setMode("agent");
+    } else if(window.location.hash==='#consumer') {
+      setMode('consumer');
+    } else if(window.location.hash==='#agent') {
+      setMode('agent');
+    }
+    
+    const opt = document.getElementById('opt-' + mode);
+    const ind = document.getElementById('toggle-indicator');
+    ind.style.left  = opt.offsetLeft + 'px';
+    ind.style.width = opt.offsetWidth + 'px';
+  });
+  
+  document.getElementById('admin-password').addEventListener('keydown',    e => { if (e.key==='Enter') doAdminLogin(); });
+  document.getElementById('consumer-password').addEventListener('keydown', e => { if (e.key==='Enter') doConsumerLogin(); });
+  document.getElementById('consumer-phone').addEventListener('keydown',    e => { if (e.key==='Enter') doConsumerLogin(); });
+  document.getElementById('agent-password').addEventListener('keydown',    e => { if (e.key==='Enter') doAgentLogin(); });
+  document.getElementById('agent-phone').addEventListener('keydown',       e => { if (e.key==='Enter') doAgentLogin(); });
+
+  async function doAdminLogin() {
+    const username = document.getElementById('admin-username').value.trim();
+    const password = document.getElementById('admin-password').value;
+    if (!username || !password) { showMsg('admin','error','Enter username and password.'); return; }
+    setLoading('admin', true);
+    const form = new URLSearchParams();
+    form.append('username', username);
+    form.append('password', password);
+    try {
+      const res  = await fetch('/auth/login', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: form });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('lpg_token', data.access_token);
+        localStorage.setItem('lpg_user', JSON.stringify({ full_name:data.full_name, role:data.role, admin_id:data.admin_id }));
+        showMsg('admin','success','Login successful! Redirecting...');
+        setTimeout(() => { window.location.href='/dashboard'; }, 600);
+      } else {
+        showMsg('admin','error', data.detail || 'Invalid credentials.');
+        setLoading('admin', false);
+      }
+    } catch(e) { showMsg('admin','error','Server connection failed.'); setLoading('admin', false); }
+  }
+
+  async function doConsumerLogin() {
+    const phone    = document.getElementById('consumer-phone').value.trim();
+    const password = document.getElementById('consumer-password').value;
+    if (!phone || !password) { showMsg('consumer','error','Enter phone number and password.'); return; }
+    if (!/^\d{10}$/.test(phone)) { showMsg('consumer','error','Enter a valid 10-digit phone number.'); return; }
+    setLoading('consumer', true);
+    try {
+      const res  = await fetch('/auth/consumer/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone, password: password }) });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('lpg_consumer_token', data.access_token);
+        localStorage.setItem('lpg_consumer', JSON.stringify({ name:data.full_name, phone:data.phone, consumer_id:data.consumer_id, agency_id:data.agency_id }));
+        showMsg('consumer','success','Login successful! Redirecting...');
+        setTimeout(() => { window.location.href='/consumers-page'; }, 600);
+      } else {
+        showMsg('consumer','error', data.detail || 'Invalid credentials.');
+        setLoading('consumer', false);
+      }
+    } catch(e) { showMsg('consumer','error','Server connection failed.'); setLoading('consumer', false); }
+  }
+
+  async function doAgentLogin() {
+    const phone    = document.getElementById('agent-phone').value.trim();
+    const password = document.getElementById('agent-password').value;
+    if (!phone || !password) { showMsg('agent','error','Enter phone number and password.'); return; }
+    if (!/^\d{10}$/.test(phone)) { showMsg('agent','error','Enter a valid 10-digit phone number.'); return; }
+    setLoading('agent', true);
+    try {
+      const res  = await fetch('/auth/agent/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone, password: password }) });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('lpg_agent_token', data.access_token);
+        localStorage.setItem('lpg_agent', JSON.stringify({ name:data.full_name, phone:data.phone, agent_id:data.agent_id, agency_id:data.agency_id }));
+        showMsg('agent','success','Login successful! Redirecting...');
+        setTimeout(() => { window.location.href='/delivery-portal'; }, 600);
+      } else {
+        showMsg('agent','error', data.detail || 'Invalid credentials.');
+        setLoading('agent', false);
+      }
+    } catch(e) { showMsg('agent','error','Server connection failed.'); setLoading('agent', false); }
+  }
+
+  function setLoading(side, on) {
+    document.getElementById(side+'-btn').disabled = on;
+    document.getElementById(side+'-spinner').style.display = on ? 'block' : 'none';
+    document.getElementById(side+'-label').textContent = on ? 'Signing in...' : (side==='admin' ? 'Sign In as Admin' : (side==='consumer' ? 'Sign In as Consumer' : 'Sign In as Agent'));
+  }
+  
+  function showMsg(side, type, text) {
+    const icon = type==='error' ? 'ti-alert-circle' : 'ti-circle-check';
+    document.getElementById(side+'-msg').innerHTML = `<div class="msg-${type}"><i class="ti ${icon}" style="font-size:14px;flex-shrink:0"></i>${text}</div>`;
+  }
+
+  function updateLandingWALink() {
+    var phoneInput = document.getElementById('wa-phone-landing').value.trim();
+    var baseMsg = "Hi! The website is down. I want to book an LPG cylinder. My registered phone number is: ";
+    
+    var cleanPhone = phoneInput.replace(/\D/g, '');
+    if (cleanPhone && !cleanPhone.startsWith('91') && cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+    
+    var link = document.getElementById('wa-link-landing');
+    if (cleanPhone) {
+      link.href = "https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(baseMsg);
+    } else {
+      link.href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(baseMsg);
+    }
+  }
+
+  function copyLandingWAText() {
+    var baseMsg = "Hi! The website is down. I want to book an LPG cylinder. My registered phone number is: ";
+    navigator.clipboard.writeText(baseMsg).then(function() {
+      showMsg('consumer', 'success', 'Booking template copied to clipboard!');
+      setTimeout(function() {
+        const msgEl = document.getElementById('consumer-msg');
+        if (msgEl) msgEl.innerHTML = '';
+      }, 3000);
+    }).catch(function() {
+      alert("Failed to copy template. Message: " + baseMsg);
+    });
+  }
+</script>
+</body></html>

@@ -1,0 +1,150 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Policies - LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Policies</div>
+        <div class="page-sub">Priority rules and booking restrictions</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-ghost btn-sm" onclick="loadPolicies()">Refresh</button>
+      </div>
+    </div>
+
+    <div id="page-content">
+      <div style="text-align:center;padding:40px"><span class="spinner"></span></div>
+    </div>
+
+  
+<div class="card" style="margin-top:20px">
+  <div class="card-header">
+    <div class="card-title">Booking Restrictions</div>
+    <div class="card-sub">Gap and monthly limits per consumer type</div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Consumer Type</th><th>Min Gap Between Bookings</th><th>Max Cylinders / Month</th></tr></thead>
+    <tbody id="restrictions-tbody"></tbody>
+  </table></div>
+</div>
+
+<div class="card" style="margin-top:20px">
+  <div class="card-header">
+    <div class="card-title">Booking Restrictions</div>
+    <div class="card-sub">Gap and monthly limits per consumer type</div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Consumer Type</th><th>Min Gap Between Bookings</th><th>Max Cylinders / Month</th></tr></thead>
+    <tbody id="restrictions-tbody"></tbody>
+  </table></div>
+</div>
+</main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+requireAuth();
+renderSidebar('policies');
+
+async function loadPolicies() {
+  var el = document.getElementById('page-content');
+  el.innerHTML = '<div style="text-align:center;padding:40px"><span class="spinner"></span></div>';
+  try {
+    var [data, rdata] = await Promise.all([api.get('/admin/policies'), api.get('/admin/restrictions')]); var restrictions = rdata || [];
+    var policies = data || [];
+
+    if (!policies.length) {
+      el.innerHTML = '<div class="card"><div class="empty-state"><div class="empty-icon">&#128220;</div><p>No policies configured</p></div></div>';
+      return;
+    }
+
+    el.innerHTML = '<div class="card">'
+      + '<div class="card-header"><div><div class="card-title">Priority Policies</div><div class="card-sub">Allocation rules by consumer type</div></div></div>'
+      + '<div class="table-wrap"><table>'
+      + '<thead><tr><th>Consumer Type</th><th>Priority Rank</th><th>Max Cylinders</th><th>Crisis Max</th><th>Status</th></tr></thead>'
+      + '<tbody>'
+      + policies.map(function(p) {
+          return '<tr>'
+            + '<td><strong>' + (p.consumer_type || '-') + '</strong></td>'
+            + '<td class="td-mono">' + (p.priority_rank || '-') + '</td>'
+            + '<td class="td-mono">' + (p.max_cylinders || '-') + '</td>'
+            + '<td class="td-mono">' + (p.crisis_max || '-') + '</td>'
+            + '<td>' + badge(p.is_active ? 'active' : 'inactive') + '</td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table></div></div>';
+
+  } catch(e) {
+    // If /admin/policies doesn't exist, show the static priority rules
+    el.innerHTML = ''
+      + '<div class="card" style="margin-bottom:20px">'
+      + '<div class="card-header"><div><div class="card-title">Distribution Priority Order</div><div class="card-sub">Applied during every allocation run</div></div></div>'
+      + '<div style="padding:20px;display:flex;flex-direction:column;gap:12px">'
+      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">'
+      + '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">1</div>'
+      + '<div><div style="font-weight:600;font-size:13px">Domestic Consumers</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Households - highest priority, always processed first</div></div>'
+      + '<div style="margin-left:auto">' + badge('domestic') + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">'
+      + '<div style="width:32px;height:32px;border-radius:50%;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">2</div>'
+      + '<div><div style="font-weight:600;font-size:13px">Essential Services</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Hospitals, schools, emergency services - second priority</div></div>'
+      + '<div style="margin-left:auto">' + badge('essential') + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">'
+      + '<div style="width:32px;height:32px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">3</div>'
+      + '<div><div style="font-weight:600;font-size:13px">Commercial Users</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Restaurants, hotels - allocated from remaining stock only</div></div>'
+      + '<div style="margin-left:auto">' + badge('commercial') + '</div>'
+      + '</div>'
+      + '</div></div>'
+
+      + '<div class="card">'
+      + '<div class="card-header"><div><div class="card-title">Booking Restrictions</div><div class="card-sub">Limits applied per consumer type</div></div></div>'
+      + '<div class="table-wrap"><table>'
+      + '<thead><tr><th>Consumer Type</th><th>Max Cylinders / Booking</th><th>Crisis Limit</th><th>Min Gap Between Bookings</th></tr></thead>'
+      + '<tbody>'
+      + '<tr><td>' + badge('domestic') + '</td><td class="td-mono">2</td><td class="td-mono">1</td><td class="td-muted">30 days</td></tr>'
+      + '<tr><td>' + badge('essential') + '</td><td class="td-mono">5</td><td class="td-mono">3</td><td class="td-muted">15 days</td></tr>'
+      + '<tr><td>' + badge('commercial') + '</td><td class="td-mono">10</td><td class="td-mono">0 (suspended)</td><td class="td-muted">7 days</td></tr>'
+      + '</tbody></table></div></div>';
+  }
+}
+
+loadPolicies();
+
+async function loadRestrictions() {
+  try {
+    var data = await api.get('/admin/restrictions');
+    var rows = data || [];
+    document.getElementById('restrictions-tbody').innerHTML = rows.map(function(r) {
+      return '<tr><td><strong>' + r.consumer_type + '</strong></td><td>' + r.min_gap_days + ' days</td><td>' + r.max_cylinders_month + '</td></tr>';
+    }).join('');
+  } catch(e) {}
+}
+loadRestrictions();
+
+async function loadRestrictions() {
+  try {
+    var data = await api.get('/admin/restrictions');
+    var rows = data || [];
+    document.getElementById('restrictions-tbody').innerHTML = rows.map(function(r) {
+      return '<tr><td><strong>' + r.consumer_type + '</strong></td><td>' + r.min_gap_days + ' days</td><td>' + r.max_cylinders_month + '</td></tr>';
+    }).join('');
+  } catch(e) {}
+}
+loadRestrictions();
+</script>
+</body>
+</html>
+
+

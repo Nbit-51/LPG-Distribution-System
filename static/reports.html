@@ -1,0 +1,192 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports - LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Reports &amp; Analytics</h1>
+        <p class="page-subtitle">Supply, demand &amp; distribution insights</p>
+      </div>
+      <button class="btn btn-outline" onclick="loadAll()">Refresh</button>
+    </div>
+
+    <div class="stats-grid" id="summary-stats" style="margin-bottom:24px">
+      <div class="stat-card"><p>Loading...</p></div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-header">
+        <h3 class="card-title">Demand vs Supply</h3>
+        <span class="card-subtitle">By consumer type</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Type</th><th>Demand</th><th>Supplied</th><th>Fulfilment %</th></tr></thead>
+          <tbody id="demand-body"><tr><td colspan="4" class="table-empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-header">
+        <h3 class="card-title">Consumer Summary</h3>
+        <span class="card-subtitle">By registration type</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Type</th><th>Count</th></tr></thead>
+          <tbody id="consumer-body"><tr><td colspan="2" class="table-empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-header">
+        <h3 class="card-title">Agency Performance</h3>
+        <span class="card-subtitle">Stock and delivery by agency</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Agency</th><th>Region</th><th>Available</th><th>Total Received</th></tr></thead>
+          <tbody id="agency-body"><tr><td colspan="4" class="table-empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Shortage History</h3>
+          <span class="card-subtitle">Recent shortage alerts</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Region</th><th>Demand</th><th>Supply</th><th>Shortage</th><th>Date</th></tr></thead>
+            <tbody id="shortage-body"><tr><td colspan="5" class="table-empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Crisis History</h3>
+          <span class="card-subtitle">Past crisis events</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Agency</th><th>Reason</th><th>Started</th><th>Ended</th></tr></thead>
+            <tbody id="crisis-body"><tr><td colspan="4" class="table-empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+if (!requireAuth()) {}
+else { renderSidebar('reports'); loadAll(); }
+
+async function loadAll() {
+  try {
+    var results = await Promise.all([
+      api.get('/admin/reports/demand-supply').catch(function() { return []; }),
+      api.get('/admin/reports/consumer-summary').catch(function() { return []; }),
+      api.get('/admin/reports/shortage-history').catch(function() { return []; }),
+      api.get('/admin/reports/crisis-history').catch(function() { return []; }),
+      api.get('/admin/overview').catch(function() { return {}; }),
+      api.get('/supply/stock').catch(function() { return []; })
+    ]);
+
+    var demandData   = results[0];
+    var consumerData = results[1];
+    var shortageData = results[2];
+    var crisisData   = results[3];
+    var overview     = results[4];
+    var agencyData   = results[5];
+
+    var s = overview.totals || {};
+    var bookings = s.bookings || {};
+    var totalBookings = Object.values(bookings).reduce(function(a,b){return a+b;}, 0);
+
+    // Summary stats
+    document.getElementById('summary-stats').innerHTML =
+      '<div class="stat-card"><div class="stat-value">' + (totalBookings || '--') + '</div><div class="stat-label">Total Bookings</div></div>' +
+      '<div class="stat-card green"><div class="stat-value">' + (bookings.delivered || '0') + '</div><div class="stat-label">Delivered</div></div>' +
+      '<div class="stat-card blue"><div class="stat-value">' + (bookings.pending || '0') + '</div><div class="stat-label">Allocated</div></div>' +
+      '<div class="stat-card ' + ((overview.shortages ? overview.shortages.length : 0) > 0 ? 'red' : '') + '"><div class="stat-value">' + (s.shortage_alerts || '0') + '</div><div class="stat-label">Active Alerts</div></div>';
+
+    // Demand vs supply
+    var dRows = Array.isArray(demandData) ? demandData : (demandData.results || []);
+    document.getElementById('demand-body').innerHTML = dRows.length
+      ? dRows.map(function(r) {
+          var pct = r.demand_total > 0 ? Math.round((r.supply_total / r.demand_total) * 100) : 100;
+          return '<tr><td><span class="badge badge-' + r.consumer_type + '">' + r.consumer_type + '</span></td>' +
+                 '<td>' + (r.demand_total || 0) + '</td>' +
+                 '<td>' + (r.supply_total || 0) + '</td>' +
+                 '<td>' + pct + '%</td></tr>';
+        }).join('')
+      : '<tr><td colspan="4" class="table-empty">No data</td></tr>';
+
+    // Consumer summary
+    var cRows = Array.isArray(consumerData) ? consumerData : (consumerData.results || []);
+    document.getElementById('consumer-body').innerHTML = cRows.length
+      ? cRows.map(function(r) {
+          return '<tr><td><span class="badge badge-' + r.consumer_type + '">' + r.consumer_type + '</span></td>' +
+                 '<td>' + (r.count || r.total || 0) + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="2" class="table-empty">No data</td></tr>';
+
+    // Agency performance
+    var agencies = Array.isArray(agencyData) ? agencyData : (agencyData.results || []);
+    document.getElementById('agency-body').innerHTML = agencies.length
+      ? agencies.map(function(a) {
+          return '<tr><td><strong>' + a.agency_name + '</strong></td>' +
+                 '<td>' + (a.region || '--') + '</td>' +
+                 '<td>' + (a.total_available != null ? a.total_available : '--') + '</td>' +
+                 '<td>' + (a.total_received != null ? a.total_received : '--') + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="4" class="table-empty">No agency data</td></tr>';
+
+    // Shortage history
+    var sRows = Array.isArray(shortageData) ? shortageData : (shortageData.results || []);
+    document.getElementById('shortage-body').innerHTML = sRows.length
+      ? sRows.map(function(r) {
+          return '<tr><td>' + (r.region || '--') + '</td>' +
+                 '<td>' + (r.demand_total || 0) + '</td>' +
+                 '<td>' + (r.supply_total || 0) + '</td>' +
+                 '<td style="color:#dc2626;font-weight:600">' + (r.shortage_amount || 0) + '</td>' +
+                 '<td>' + fmtDate(r.alert_date || r.created_at) + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="5" class="table-empty">No shortage history</td></tr>';
+
+    // Crisis history
+    var crRows = Array.isArray(crisisData) ? crisisData : (crisisData.results || []);
+    document.getElementById('crisis-body').innerHTML = crRows.length
+      ? crRows.map(function(r) {
+          return '<tr><td>' + (r.agency_name || '--') + '</td>' +
+                 '<td>' + (r.reason || '--') + '</td>' +
+                 '<td>' + fmtDate(r.triggered_at || r.started_at) + '</td>' +
+                 '<td>' + (r.resolved_at ? fmtDate(r.resolved_at) : '<span style="color:#dc2626">Active</span>') + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="4" class="table-empty">No crisis history</td></tr>';
+
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>

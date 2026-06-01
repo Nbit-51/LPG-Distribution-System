@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">System overview &amp; live status</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" onclick="loadDashboard()">Refresh</button>
+        <button class="btn btn-danger" id="crisis-btn" onclick="toggleCrisis()">Activate Crisis Mode</button>
+      </div>
+    </div>
+
+    <div id="crisis-banner"></div>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><p>Loading...</p></div>
+    </div>
+
+    <!-- ALLOCATION TESTING PLAYGROUND -->
+    <div class="card" style="margin-top: 24px; border: 1px solid #f97316;">
+      <div class="card-header" style="border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 class="card-title" style="color:#fb923c; display:flex; align-items:center; gap:8px; margin:0;">
+          <i class="ti ti-flask" style="font-size:20px;"></i> Allocation Testing Playground
+        </h3>
+        <span class="card-subtitle">Build custom test data and compare FCFS against the Smart Priority engine without writing to bookings, stock, or allocation history.</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:16px;">
+        <div class="form-group">
+          <label>Agency context</label>
+          <select id="sim-agency" style="background:#0f172a; color:white; border-color:#334155; width:100%;">
+            <option value="">Standalone simulation</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Available cylinders for test</label>
+          <input type="number" id="sim-stock" value="8" min="0" style="background:#0f172a; color:white; border-color:#334155; width:100%;">
+        </div>
+        <div class="form-group">
+          <label>Mode</label>
+          <label style="display:flex; align-items:center; gap:8px; height:42px; margin:0; cursor:pointer; user-select:none;">
+            <input type="checkbox" id="sim-crisis" style="width:18px; height:18px; accent-color:#f97316;"> Crisis rules active
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Rows to bulk add</label>
+          <input type="number" id="sim-bulk-count" value="10" min="1" max="60" style="background:#0f172a; color:white; border-color:#334155; width:100%;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-bottom:16px;">
+        <button class="btn btn-outline" onclick="loadDemoScenario()"><i class="ti ti-presentation"></i> 5 vs 6 Demo</button>
+        <button class="btn btn-outline" onclick="loadCrisisScenario()"><i class="ti ti-alert-triangle"></i> Crisis Demo</button>
+        <button class="btn btn-outline" onclick="generateMixedScenario()"><i class="ti ti-database-plus"></i> Generate Mixed Load</button>
+        <button class="btn btn-outline" onclick="clearSimulationRows()"><i class="ti ti-trash"></i> Clear Rows</button>
+      </div>
+
+      <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:15px;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:13px; font-weight:800; color:#e2e8f0;">Custom booking dataset</div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Add many domestic, essential, and commercial requests, then change dates, waiting days, and quantities to stress-test the algorithm.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addSimRow()" style="background:#f97316; border-color:#f97316;"><i class="ti ti-plus"></i> Add Customer Request</button>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-bottom:15px; max-height:420px;">
+        <table class="table" style="min-width: 880px;">
+          <thead>
+            <tr>
+              <th style="width:7%">#</th>
+              <th style="width:18%">Customer Type</th>
+              <th style="width:25%">Customer / Test Label</th>
+              <th style="width:15%">Cylinders Needed</th>
+              <th style="width:17%">Booking Date</th>
+              <th style="width:13%">Waiting Days</th>
+              <th style="width:5%">Action</th>
+            </tr>
+          </thead>
+          <tbody id="sim-bookings-body"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-top:10px;">
+        <div id="sim-input-summary" style="font-size:13px; color:#94a3b8;">0 requests, 0 cylinders demanded</div>
+        <button class="btn btn-primary" onclick="runSimulation()" style="background:#f97316; border-color:#f97316;">
+          <i class="ti ti-player-play"></i> Run FCFS vs Smart Test
+        </button>
+      </div>
+
+      <!-- SIMULATION OUTCOMES -->
+      <div id="sim-results" style="display:none; margin-top:25px; border-top:1px dashed #334155; padding-top:20px;">
+        <h4 style="font-size:15px; font-weight:700; margin-bottom:15px; color:#e2e8f0; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px;"><i class="ti ti-report-analytics" style="font-size:18px; color:#fb923c;"></i> Side-by-Side Allocation Comparison</h4>
+
+        <div id="sim-verdict" style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:14px; margin-bottom:15px;"></div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:15px;">
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:12px;">
+            <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700;">Demand Served</div>
+            <div style="font-size:18px; font-weight:800; color:#f8fafc; margin-top:4px;"><span id="sim-smart-served">0</span> vs <span id="sim-fcfs-served">0</span></div>
+            <div style="font-size:11px; color:#64748b;">Smart / FCFS cylinders</div>
+          </div>
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:12px;">
+            <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700;">Domestic Protected</div>
+            <div style="font-size:18px; font-weight:800; color:#93c5fd; margin-top:4px;"><span id="sim-smart-domestic">0</span> vs <span id="sim-fcfs-domestic">0</span></div>
+            <div style="font-size:11px; color:#64748b;">Smart / FCFS cylinders</div>
+          </div>
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:12px;">
+            <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700;">Idle Stock Saved</div>
+            <div style="font-size:18px; font-weight:800; color:#22c55e; margin-top:4px;" id="sim-idle-saved">0</div>
+            <div style="font-size:11px; color:#64748b;">Extra cylinders used by Smart</div>
+          </div>
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:12px;">
+            <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700;">Backlog Reduced</div>
+            <div style="font-size:18px; font-weight:800; color:#f97316; margin-top:4px;" id="sim-backlog-reduced">0</div>
+            <div style="font-size:11px; color:#64748b;">Lower unserved quantity</div>
+          </div>
+        </div>
+        
+        <div class="grid-2">
+          <!-- FCFS COLUMN -->
+          <div style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; border-bottom:1px solid #334155; padding-bottom:8px;">
+              <span style="display:inline-block; width:12px; height:12px; background:#64748b; border-radius:50%;"></span>
+              <h5 style="font-size:14px; font-weight:700; color:#cbd5e1; margin:0">FCFS (Legacy Conglomerate Engine)</h5>
+            </div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+              <div style="background:#0f172a; padding:8px; border-radius:4px; text-align:center;">
+                <div style="font-size:16px; font-weight:700; color:#ef4444;" id="fcfs-res-idle">0</div>
+                <div style="font-size:10px; color:#64748b; text-transform:uppercase; margin-top:2px;">Idle Stock (Leftover)</div>
+              </div>
+              <div style="background:#0f172a; padding:8px; border-radius:4px; text-align:center;">
+                <div style="font-size:16px; font-weight:700; color:#38bdf8;" id="fcfs-res-allocated-count">0</div>
+                <div style="font-size:10px; color:#64748b; text-transform:uppercase; margin-top:2px;">Orders Allocated</div>
+              </div>
+            </div>
+            
+            <div class="table-wrap">
+              <table class="table" style="font-size:11px;">
+                <thead>
+                  <tr>
+                    <th>Customer (Type)</th>
+                    <th>Qty</th>
+                    <th>Status / Outcome</th>
+                  </tr>
+                </thead>
+                <tbody id="fcfs-results-body">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SMART COLUMN -->
+          <div style="background:#1e293b; border:1px solid #f97316; padding:15px; border-radius:8px; box-shadow:0 0 10px rgba(249,115,22,0.15)">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; border-bottom:1px solid #f97316; padding-bottom:8px;">
+              <span style="display:inline-block; width:12px; height:12px; background:#f97316; border-radius:50%;"></span>
+              <h5 style="font-size:14px; font-weight:700; color:#f97316; margin:0">Our Smart Priority Engine</h5>
+            </div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+              <div style="background:#0f172a; padding:8px; border-radius:4px; text-align:center;">
+                <div style="font-size:16px; font-weight:700; color:#22c55e;" id="smart-res-idle">0</div>
+                <div style="font-size:10px; color:#64748b; text-transform:uppercase; margin-top:2px;">Idle Stock (Leftover)</div>
+              </div>
+              <div style="background:#0f172a; padding:8px; border-radius:4px; text-align:center;">
+                <div style="font-size:16px; font-weight:700; color:#38bdf8;" id="smart-res-allocated-count">0</div>
+                <div style="font-size:10px; color:#64748b; text-transform:uppercase; margin-top:2px;">Allocated / Split</div>
+              </div>
+            </div>
+            
+            <div class="table-wrap">
+              <table class="table" style="font-size:11px;">
+                <thead>
+                  <tr>
+                    <th>Customer (Type)</th>
+                    <th>Qty</th>
+                    <th>Status / Outcome</th>
+                  </tr>
+                </thead>
+                <tbody id="smart-results-body">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Priority Queue</h3>
+          <span class="card-subtitle">Top pending bookings</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Consumer</th><th>Type</th><th>Cylinders</th><th>Date</th></tr></thead>
+            <tbody id="queue-body"><tr><td colspan="4" class="table-empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Agency Stock Levels</h3>
+          <span class="card-subtitle">Current inventory</span>
+        </div>
+        <div id="stock-list" style="padding:16px"><p>Loading...</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Recent Bookings</h3>
+        <a href="/bookings-page" class="btn btn-sm btn-outline">View All</a>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>ID</th><th>Consumer</th><th>Type</th><th>Agency</th><th>Cylinders</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="recent-body"><tr><td colspan="7" class="table-empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 class="card-title" style="margin-bottom:0">Recent Tax Invoices</h3>
+        <a href="/invoices-page" class="btn btn-sm btn-outline">View All</a>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Customer</th>
+              <th>Agency</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Issued At</th>
+            </tr>
+          </thead>
+          <tbody id="recent-invoices-body">
+            <tr><td colspan="6" class="table-empty">Loading recent invoices...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+if (!requireAuth()) {}
+else { 
+  renderSidebar('dashboard'); 
+  loadDashboard(); 
+  initSimulationTable(); 
+}
+
+async function loadDashboard() {
+  try {
+    var results = await Promise.all([
+      api.get('/admin/overview'),
+      api.get('/bookings/priority-queue').catch(function() { return {}; }),
+      api.get('/invoices/admin?page=1&page_size=5').catch(function() { return { results: [] }; })
+    ]);
+    var overview = results[0];
+    var queueData = results[1];
+    var invoiceRes = results[2];
+    var s = overview.totals || {};
+    var tc = s.consumers != null ? s.consumers : "--";
+    var pb = (s.bookings && s.bookings.pending != null) ? s.bookings.pending : "--";
+    var ta = (overview.stock_summary && overview.stock_summary.length) ? overview.stock_summary.reduce(function(a,b){return a+(b.available_cylinders||0);},0) : "--";
+    var sa = overview.shortages ? overview.shortages.length : 0;
+    var tg = s.agencies != null ? s.agencies : "--";
+    var dt = (s.bookings && s.bookings.delivered) ? s.bookings.delivered : "0";
+    var fake_s = {};
+    var crisisActive = overview.crisis_active || false;
+    var banner = document.getElementById('crisis-banner');
+    var cb = document.getElementById('crisis-btn');
+
+    if (crisisActive) {
+      banner.innerHTML = '<div class="alert alert-danger" style="margin-bottom:20px"><strong>CRISIS MODE ACTIVE</strong> - Commercial allocations suspended.</div>';
+      cb.textContent = 'Deactivate Crisis Mode';
+      cb.className = 'btn btn-success';
+    } else {
+      banner.innerHTML = '';
+      cb.textContent = 'Activate Crisis Mode';
+      cb.className = 'btn btn-danger';
+    }
+
+    var tc = s.total_consumers != null ? s.total_consumers : '--';
+    var pb = s.pending_bookings != null ? s.pending_bookings : '--';
+    var ta = s.total_available != null ? s.total_available : '--';
+    var sa = s.shortage_alerts != null ? s.shortage_alerts : 0;
+    var tg = s.total_agencies != null ? s.total_agencies : '--';
+    var dt = s.delivered_today || '0';
+
+    document.getElementById('stats-grid').innerHTML =
+      '<div class="stat-card"><div class="stat-value">' + tc + '</div><div class="stat-label">Total Consumers</div></div>' +
+      '<div class="stat-card blue"><div class="stat-value">' + pb + '</div><div class="stat-label">Pending Bookings</div></div>' +
+      '<div class="stat-card green"><div class="stat-value">' + ta + '</div><div class="stat-label">Cylinders Available</div></div>' +
+      '<div class="stat-card ' + (sa > 0 ? 'red' : '') + '"><div class="stat-value">' + sa + '</div><div class="stat-label">Shortage Alerts</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + tg + '</div><div class="stat-label">Active Agencies</div></div>' +
+      '<div class="stat-card green"><div class="stat-value">' + dt + '</div><div class="stat-label">Delivered Today</div></div>';
+
+    var queue = queueData.queue || queueData.results || [];
+    if (queue.length) {
+      document.getElementById('queue-body').innerHTML = queue.slice(0, 8).map(function(r) {
+        return '<tr><td>' + (r.consumer_name || r.full_name || '--') + '</td>' +
+               '<td><span class="badge badge-' + r.consumer_type + '">' + r.consumer_type + '</span></td>' +
+               '<td>' + r.cylinders_requested + '</td>' +
+               '<td>' + fmtDate(r.created_at) + '</td></tr>';
+      }).join('');
+    } else {
+      document.getElementById('queue-body').innerHTML = '<tr><td colspan="4" class="table-empty">No pending bookings</td></tr>';
+    }
+
+    var agencies = overview.stock_summary || [];
+    if (agencies.length) {
+      document.getElementById('stock-list').innerHTML = agencies.map(function(a) {
+        var pct = a.total_capacity ? Math.round((a.available_cylinders / a.total_capacity) * 100) : 0;
+        var cls = pct < 20 ? 'low' : pct > 60 ? 'high' : '';
+        return '<div style="margin-bottom:14px">' +
+               '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">' +
+               '<span>' + (a.agency_name || a.name) + '</span>' +
+               '<span style="color:#64748b">' + (a.available_cylinders || 0) + '/' + (a.total_capacity || 0) + '</span>' +
+               '</div>' +
+               '<div class="progress-bar-wrap"><div class="progress-bar-fill ' + cls + '" style="width:' + Math.min(pct, 100) + '%"></div></div>' +
+               '</div>';
+      }).join('');
+    } else {
+      document.getElementById('stock-list').innerHTML = '<p style="color:#64748b;font-size:13px;padding:8px">No agency data</p>';
+    }
+
+    var bookings = overview.recent_bookings || [];
+    if (bookings.length) {
+      document.getElementById('recent-body').innerHTML = bookings.map(function(b) {
+        return '<tr>' +
+               '<td>#' + (b.booking_id || b.id) + '</td>' +
+               '<td>' + (b.consumer_name || b.full_name || '--') + '</td>' +
+               '<td><span class="badge badge-' + b.consumer_type + '">' + b.consumer_type + '</span></td>' +
+               '<td>' + (b.agency_name || '--') + '</td>' +
+               '<td>' + b.cylinders_requested + '</td>' +
+               '<td><span class="badge badge-' + b.status + '">' + b.status + '</span></td>' +
+               '<td>' + fmtDate(b.created_at) + '</td>' +
+               '</tr>';
+      }).join('');
+    } else {
+      document.getElementById('recent-body').innerHTML = '<tr><td colspan="7" class="table-empty">No recent bookings</td></tr>';
+    }
+
+    var recentInvoices = invoiceRes.results || [];
+    if (recentInvoices.length) {
+      document.getElementById('recent-invoices-body').innerHTML = recentInvoices.map(function(inv) {
+        var statusClass = 'pending';
+        if (inv.payment_status === 'paid') statusClass = 'allocated';
+        if (inv.payment_status === 'refunded') statusClass = 'cancelled';
+        return '<tr>' +
+               '<td><strong>' + inv.invoice_number + '</strong></td>' +
+               '<td>' + (inv.consumer_name || 'Client #' + inv.consumer_id) + '</td>' +
+               '<td>' + (inv.agency_name || 'Agency #' + inv.agency_id) + '</td>' +
+               '<td><strong>₹' + parseFloat(inv.total_amount).toFixed(2) + '</strong></td>' +
+               '<td><span class="badge badge-' + statusClass + '">' + inv.payment_status + '</span></td>' +
+               '<td>' + fmtDateTime(inv.issued_at) + '</td>' +
+               '</tr>';
+      }).join('');
+    } else {
+      document.getElementById('recent-invoices-body').innerHTML = '<tr><td colspan="6" class="table-empty">No recent invoices</td></tr>';
+    }
+
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function toggleCrisis() {
+  try {
+    var ov = await api.get('/admin/overview');
+    var action = ov.crisis_active ? 'deactivate' : 'activate';
+    action === 'activate' ? await api.post('/allocation/crisis/1/activate', {threshold_cylinders: 50, notes: 'Manual toggle'}) : await api.post('/allocation/crisis/1/resolve', {});
+    toast(ov.crisis_active ? 'Crisis deactivated' : 'Crisis activated', ov.crisis_active ? 'success' : 'warning');
+    loadDashboard();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+let simRowCount = 0;
+
+function initSimulationTable() {
+  loadSimulationAgencies();
+  const stockInput = document.getElementById('sim-stock');
+  const crisisInput = document.getElementById('sim-crisis');
+  if (stockInput) stockInput.addEventListener('input', updateSimulationInputSummary);
+  if (crisisInput) crisisInput.addEventListener('change', updateSimulationInputSummary);
+  loadDemoScenario(false);
+}
+
+async function loadSimulationAgencies() {
+  const select = document.getElementById('sim-agency');
+  if (!select) return;
+  try {
+    const data = await api.get('/agencies/?page_size=100');
+    const agencies = data.results || [];
+    select.innerHTML = '<option value="">Standalone simulation</option>' + agencies.map(function(a) {
+      return `<option value="${a.agency_id}">${escapeHtml(a.agency_name || 'Agency #' + a.agency_id)}</option>`;
+    }).join('');
+  } catch(e) {
+    select.innerHTML = '<option value="">Standalone simulation</option>';
+  }
+}
+
+function loadDemoScenario(showToast = true) {
+  document.getElementById('sim-stock').value = 8;
+  document.getElementById('sim-crisis').checked = false;
+  document.getElementById('sim-results').style.display = 'none';
+  const defaultBookings = [
+    { type: 'domestic', name: 'Domestic Household Order', qty: 5, date: '2026-05-26', days: 1 },
+    { type: 'commercial', name: 'Commercial Bulk Order', qty: 6, date: '2026-05-25', days: 2 }
+  ];
+  const tbody = document.getElementById('sim-bookings-body');
+  tbody.innerHTML = '';
+  simRowCount = 0;
+  defaultBookings.forEach(b => {
+    addSimRow(b.type, b.name, b.qty, b.date, b.days);
+  });
+  updateSimulationInputSummary();
+  if (showToast) toast('Demo scenario loaded', 'success');
+}
+
+function loadCrisisScenario() {
+  document.getElementById('sim-stock').value = 10;
+  document.getElementById('sim-crisis').checked = true;
+  document.getElementById('sim-results').style.display = 'none';
+  const rows = [
+    { type: 'domestic', name: 'Household Refill A', qty: 3, date: '2026-05-26', days: 1 },
+    { type: 'domestic', name: 'Household Refill B', qty: 2, date: '2026-05-24', days: 3 },
+    { type: 'essential', name: 'Clinic Kitchen Supply', qty: 4, date: '2026-05-23', days: 4 },
+    { type: 'commercial', name: 'Hotel Bulk Request', qty: 6, date: '2026-05-22', days: 5 },
+    { type: 'commercial', name: 'Restaurant Refill', qty: 5, date: '2026-05-21', days: 6 }
+  ];
+  const tbody = document.getElementById('sim-bookings-body');
+  tbody.innerHTML = '';
+  simRowCount = 0;
+  rows.forEach(b => addSimRow(b.type, b.name, b.qty, b.date, b.days));
+  updateSimulationInputSummary();
+  toast('Crisis scenario loaded', 'success');
+}
+
+function generateMixedScenario() {
+  const count = Math.max(1, Math.min(60, parseInt(document.getElementById('sim-bulk-count').value) || 10));
+  const types = ['domestic', 'essential', 'commercial'];
+  const labels = {
+    domestic: 'Domestic Household',
+    essential: 'Essential Service',
+    commercial: 'Commercial Outlet'
+  };
+  const tbody = document.getElementById('sim-bookings-body');
+  tbody.innerHTML = '';
+  simRowCount = 0;
+  for (let i = 0; i < count; i++) {
+    const type = types[i % types.length];
+    const qty = type === 'domestic' ? 1 + (i % 5) : type === 'essential' ? 2 + (i % 6) : 3 + (i % 8);
+    const day = 26 - (i % 12);
+    const date = `2026-05-${String(Math.max(1, day)).padStart(2, '0')}`;
+    addSimRow(type, `${labels[type]} ${i + 1}`, qty, date, i % 14);
+  }
+  document.getElementById('sim-stock').value = Math.max(5, Math.round(count * 2.4));
+  document.getElementById('sim-results').style.display = 'none';
+  updateSimulationInputSummary();
+  toast('Mixed test load generated', 'success');
+}
+
+function clearSimulationRows() {
+  document.getElementById('sim-bookings-body').innerHTML = '';
+  document.getElementById('sim-results').style.display = 'none';
+  simRowCount = 0;
+  updateSimulationInputSummary();
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function summarizeSimulation(result) {
+  const summary = result.summary || {};
+  const smartServed = summary.smart_allocated_qty != null ? summary.smart_allocated_qty : (result.smart.allocated_qty || 0);
+  const fcfsServed = summary.fcfs_allocated_qty != null ? summary.fcfs_allocated_qty : (result.fcfs.allocated_qty || 0);
+  const smartDomestic = summary.smart_domestic_qty || 0;
+  const fcfsDomestic = summary.fcfs_domestic_qty || 0;
+  const idleSaved = summary.smart_idle_saved_qty || 0;
+  const backlogReduced = (summary.fcfs_unserved_qty || 0) - (summary.smart_unserved_qty || 0);
+
+  document.getElementById('sim-smart-served').textContent = smartServed;
+  document.getElementById('sim-fcfs-served').textContent = fcfsServed;
+  document.getElementById('sim-smart-domestic').textContent = smartDomestic;
+  document.getElementById('sim-fcfs-domestic').textContent = fcfsDomestic;
+  document.getElementById('sim-idle-saved').textContent = Math.max(0, idleSaved);
+  document.getElementById('sim-backlog-reduced').textContent = Math.max(0, backlogReduced);
+
+  let verdictTitle = 'Both approaches produced the same total allocation.';
+  let verdictText = 'Adjust dates, stock, order size, or crisis mode to test where the priority engine changes the outcome.';
+  let verdictColor = '#94a3b8';
+
+  if (smartServed > fcfsServed || smartDomestic > fcfsDomestic || idleSaved > 0) {
+    verdictTitle = 'Smart Priority gives the stronger result for this input.';
+    verdictText = `It serves ${smartServed} cylinder(s) versus ${fcfsServed} in FCFS, protects ${smartDomestic} domestic cylinder(s) versus ${fcfsDomestic}, and avoids ${Math.max(0, idleSaved)} idle cylinder(s).`;
+    verdictColor = '#22c55e';
+  } else if (smartServed < fcfsServed) {
+    verdictTitle = 'FCFS serves more cylinders for this input.';
+    verdictText = 'This is useful evidence too: the sandbox lets you tune the policy and explain exactly when priority rules trade throughput for protected consumer classes.';
+    verdictColor = '#f59e0b';
+  }
+
+  document.getElementById('sim-verdict').innerHTML =
+    `<div style="display:flex; gap:10px; align-items:flex-start;">
+      <i class="ti ti-bulb" style="color:${verdictColor}; font-size:20px; margin-top:1px;"></i>
+      <div>
+        <div style="font-size:14px; font-weight:800; color:${verdictColor};">${verdictTitle}</div>
+        <div style="font-size:13px; color:#cbd5e1; margin-top:4px; line-height:1.45;">${verdictText}</div>
+      </div>
+    </div>`;
+}
+
+function addSimRow(type = 'domestic', name = '', qty = 1, date = '2026-05-26', days = 0) {
+  simRowCount++;
+  const tbody = document.getElementById('sim-bookings-body');
+  const tr = document.createElement('tr');
+  tr.id = `sim-row-${simRowCount}`;
+  tr.innerHTML = `
+    <td class="sim-row-num" style="color:#64748b; font-weight:700;">${simRowCount}</td>
+    <td>
+      <select class="sim-type" style="padding:4px 6px; background:#0f172a; color:white; border-color:#334155; font-size:13px; width:100%; border-radius:4px;">
+        <option value="domestic" ${type === 'domestic' ? 'selected' : ''}>Domestic</option>
+        <option value="essential" ${type === 'essential' ? 'selected' : ''}>Essential</option>
+        <option value="commercial" ${type === 'commercial' ? 'selected' : ''}>Commercial</option>
+      </select>
+    </td>
+    <td>
+      <input type="text" class="sim-name" value="${escapeHtml(name)}" placeholder="e.g. User Name" style="padding:4px 6px; background:#0f172a; color:white; border-color:#334155; font-size:13px; border-radius:4px; width:100%;">
+    </td>
+    <td>
+      <input type="number" class="sim-qty" value="${qty}" min="1" style="padding:4px 6px; background:#0f172a; color:white; border-color:#334155; font-size:13px; border-radius:4px; width:100%;">
+    </td>
+    <td>
+      <input type="date" class="sim-date" value="${date}" style="padding:4px 6px; background:#0f172a; color:white; border-color:#334155; font-size:13px; border-radius:4px; width:100%;">
+    </td>
+    <td>
+      <input type="number" class="sim-days" value="${days}" min="0" style="padding:4px 6px; background:#0f172a; color:white; border-color:#334155; font-size:13px; border-radius:4px; width:100%;">
+    </td>
+    <td>
+      <button class="btn btn-sm btn-danger" onclick="deleteSimRow(${simRowCount})" style="padding:4px 8px; font-size:12px; background:#ef4444; border-color:#ef4444; color:white;"><i class="ti ti-trash"></i></button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelectorAll('input, select').forEach(function(input) {
+    input.addEventListener('input', updateSimulationInputSummary);
+    input.addEventListener('change', updateSimulationInputSummary);
+  });
+  updateSimulationInputSummary();
+}
+
+function deleteSimRow(id) {
+  const row = document.getElementById(`sim-row-${id}`);
+  if (row) row.remove();
+  renumberSimulationRows();
+  updateSimulationInputSummary();
+}
+
+function renumberSimulationRows() {
+  document.querySelectorAll('#sim-bookings-body tr').forEach(function(row, index) {
+    const num = row.querySelector('.sim-row-num');
+    if (num) num.textContent = index + 1;
+  });
+}
+
+function updateSimulationInputSummary() {
+  const rows = document.querySelectorAll('#sim-bookings-body tr');
+  let demand = 0;
+  const counts = { domestic: 0, essential: 0, commercial: 0 };
+  rows.forEach(function(row) {
+    const type = row.querySelector('.sim-type')?.value || 'domestic';
+    const qty = Math.max(1, parseInt(row.querySelector('.sim-qty')?.value) || 1);
+    demand += qty;
+    counts[type] = (counts[type] || 0) + 1;
+  });
+  const stock = Math.max(0, parseInt(document.getElementById('sim-stock')?.value) || 0);
+  const gap = demand - stock;
+  const gapText = gap > 0 ? `${gap} cylinder shortage` : `${Math.abs(gap)} cylinder surplus`;
+  const summary = document.getElementById('sim-input-summary');
+  if (summary) {
+    summary.textContent = `${rows.length} requests, ${demand} cylinders demanded, ${stock} available, ${gapText} (${counts.domestic} domestic, ${counts.essential} essential, ${counts.commercial} commercial)`;
+  }
+}
+
+async function runSimulation() {
+  const rows = document.querySelectorAll('#sim-bookings-body tr');
+  const availableStock = parseInt(document.getElementById('sim-stock').value) || 0;
+  const crisisMode = document.getElementById('sim-crisis').checked;
+  
+  const bookings = [];
+  rows.forEach((row, index) => {
+    const type = row.querySelector('.sim-type').value;
+    const name = row.querySelector('.sim-name').value.trim() || `User #${index+1}`;
+    const qty = parseInt(row.querySelector('.sim-qty').value) || 1;
+    const date = row.querySelector('.sim-date').value || '2026-05-26';
+    const days = parseInt(row.querySelector('.sim-days').value) || 0;
+    
+    bookings.push({
+      booking_id: index + 1,
+      consumer_name: name,
+      consumer_type: type,
+      cylinders_requested: qty,
+      booking_date: date,
+      waiting_days: days
+    });
+  });
+  
+  if (!bookings.length) {
+    toast('Please add at least one mock booking row.', 'error');
+    return;
+  }
+  
+  try {
+    const result = await api.post('/allocation/simulate', {
+      available_stock: availableStock,
+      crisis_mode: crisisMode,
+      bookings: bookings
+    });
+    
+    document.getElementById('sim-results').style.display = 'block';
+    summarizeSimulation(result);
+    
+    // 1. Render FCFS Outcome
+    const fcfs = result.fcfs;
+    document.getElementById('fcfs-res-idle').textContent = fcfs.remaining_stock;
+    document.getElementById('fcfs-res-allocated-count').textContent = fcfs.allocated.length;
+    
+    const fcfsBody = document.getElementById('fcfs-results-body');
+    fcfsBody.innerHTML = '';
+    
+    const fcfsAll = [...fcfs.allocated, ...fcfs.skipped];
+    fcfsAll.forEach(b => {
+      const isAlloc = fcfs.allocated.some(x => x.booking_id === b.booking_id);
+      const badgeCls = b.consumer_type === 'domestic' ? 'domestic' : b.consumer_type === 'essential' ? 'essential' : 'commercial';
+      const safeName = escapeHtml(b.consumer_name);
+      const safeType = escapeHtml(b.consumer_type);
+      const safeReason = escapeHtml(b.reason || '');
+      const statusHtml = isAlloc 
+        ? `<span class="badge" style="background:#22c55e; color:white; font-size:10px; padding:3px 6px; border-radius:4px; display:inline-block;">Allocated ${b.allocated_qty} cyls</span>`
+        : `<span class="badge" style="background:#ef4444; color:white; font-size:10px; padding:3px 6px; border-radius:4px; display:inline-block;" title="${safeReason}">Skipped</span><div style="font-size:9px;color:#94a3b8;margin-top:2px;">${safeReason}</div>`;
+      
+      fcfsBody.innerHTML += `<tr>
+        <td><strong>${safeName}</strong><br><span class="badge badge-${badgeCls}" style="font-size:9px; margin-top:2px;">${safeType}</span></td>
+        <td>${b.requested_qty}</td>
+        <td>${statusHtml}</td>
+      </tr>`;
+    });
+    
+    // 2. Render Smart Outcome
+    const smart = result.smart;
+    document.getElementById('smart-res-idle').textContent = smart.remaining_stock;
+    document.getElementById('smart-res-allocated-count').textContent = `${smart.allocated.length} (split: ${smart.allocated.filter(x => x.is_shortage_split || x.is_crisis_capped).length})`;
+    
+    const smartBody = document.getElementById('smart-results-body');
+    smartBody.innerHTML = '';
+    
+    const smartAll = [...smart.allocated, ...smart.skipped];
+    smartAll.forEach(b => {
+      const isAlloc = smart.allocated.some(x => x.booking_id === b.booking_id);
+      const badgeCls = b.consumer_type === 'domestic' ? 'domestic' : b.consumer_type === 'essential' ? 'essential' : 'commercial';
+      const safeName = escapeHtml(b.consumer_name);
+      const safeType = escapeHtml(b.consumer_type);
+      const safeReason = escapeHtml(b.reason || '');
+      
+      let statusHtml = '';
+      if (isAlloc) {
+        let badgeStyle = 'background:#22c55e; color:white;';
+        if (b.is_crisis_capped || b.is_shortage_split) badgeStyle = 'background:#f97316; color:white;';
+        statusHtml = `<span class="badge" style="${badgeStyle} font-size:10px; padding:3px 6px; border-radius:4px; display:inline-block;">Allocated ${b.allocated_qty} cyls</span>`;
+        if (b.is_crisis_capped || b.is_shortage_split) {
+          statusHtml += `<div style="font-size:9px;color:#f97316;margin-top:2px;font-weight:600;">${safeReason}</div>`;
+        }
+      } else {
+        statusHtml = `<span class="badge" style="background:#ef4444; color:white; font-size:10px; padding:3px 6px; border-radius:4px; display:inline-block;" title="${safeReason}">Skipped</span><div style="font-size:9px;color:#94a3b8;margin-top:2px;">${safeReason}</div>`;
+      }
+      
+      smartBody.innerHTML += `<tr>
+        <td><strong>${safeName}</strong><br><span class="badge badge-${badgeCls}" style="font-size:9px; margin-top:2px;">${safeType}</span></td>
+        <td>${b.requested_qty}</td>
+        <td>${statusHtml}</td>
+      </tr>`;
+    });
+    
+    toast('Simulation run complete!', 'success');
+  } catch (e) {
+    toast(`Simulation failed: ${e.message}`, 'error');
+  }
+}
+</script>
+</body>
+</html>
+
+
+

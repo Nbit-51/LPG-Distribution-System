@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tax Invoices - LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+<!-- Tabler Icons CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  /* Premium tweaks for Invoice page */
+  .invoice-print-container {
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: monospace;
+    padding: 25px;
+    border: 1px dashed #334155;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  .invoice-print-header {
+    text-align: center;
+    border-bottom: 2px solid #334155;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+  }
+  .invoice-print-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #f97316;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .invoice-print-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .invoice-print-table {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  .invoice-print-table th, .invoice-print-table td {
+    padding: 8px 0;
+    border-bottom: 1px solid #1e293b;
+    font-size: 13px;
+  }
+  .invoice-print-table th {
+    color: #94a3b8;
+    text-align: left;
+  }
+  .invoice-print-table td.amount, .invoice-print-table th.amount {
+    text-align: right;
+  }
+  .invoice-print-total-box {
+    margin-top: 15px;
+    border-top: 2px solid #334155;
+    padding-top: 10px;
+    text-align: right;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  .print-btn {
+    background: #f97316 !important;
+    color: white !important;
+  }
+  .print-btn:hover {
+    background: #ea580c !important;
+  }
+
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    .modal-content, .modal-content * {
+      visibility: visible;
+    }
+    .modal-content {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      background: white !important;
+      color: black !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+    .invoice-print-container {
+      background: white !important;
+      color: black !important;
+      border: 1px dashed black !important;
+    }
+    .invoice-print-title {
+      color: black !important;
+    }
+    .modal-footer {
+      display: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Tax Invoices</h1>
+        <p class="page-sub">LPG Distribution financial logs and GST receipts</p>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="loadInvoices()"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+    </div>
+
+    <!-- Summary Statistics widgets -->
+    <div class="stats-grid" id="invoice-stats">
+      <div class="stat-card info">
+        <div class="stat-label">Total Invoices</div>
+        <div class="stat-value" id="stat-total-invoices">--</div>
+        <div class="stat-meta">Across all cities</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Total Billed</div>
+        <div class="stat-value" id="stat-total-billed">--</div>
+        <div class="stat-meta">INR incl. GST</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-label">CGST &amp; SGST Collected</div>
+        <div class="stat-value" id="stat-total-tax">--</div>
+        <div class="stat-meta">9% + 9% standard splits</div>
+      </div>
+    </div>
+
+    <!-- Filters and Invoices list card -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <h3 class="card-title" style="margin-bottom:0">All Transactions</h3>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <select id="filter-status" onchange="filterInvoices()" style="width: 150px;">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="refunded">Refunded</option>
+          </select>
+          <input type="text" id="search-invoice" placeholder="Search Invoice No or Client..." oninput="filterInvoices()" style="width: 250px;">
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Invoice Number</th>
+              <th>Customer</th>
+              <th>LPG Agency</th>
+              <th>Base Cost</th>
+              <th>Taxes (CGST+SGST)</th>
+              <th>Delivery Fee</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Issued At</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="invoices-body">
+            <tr>
+              <td colspan="10" class="table-empty">Loading invoices data...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Invoice Printable Modal -->
+<div class="modal" id="invoice-modal">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Official Tax Invoice</h3>
+      <button class="modal-close" onclick="hideModal('invoice-modal')">&times;</button>
+    </div>
+    
+    <div class="invoice-print-container" id="printable-area">
+      <!-- Generated via JS -->
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('invoice-modal')">Close</button>
+      <button class="btn print-btn" onclick="window.print()"><i class="ti ti-printer"></i> Print Invoice</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+// Verify Auth
+if (!requireAuth()) {
+  // redirecting
+} else {
+  renderSidebar('invoices');
+  loadInvoices();
+}
+
+let allInvoices = [];
+
+async function loadInvoices() {
+  try {
+    const data = await api.get('/invoices/admin');
+    allInvoices = data.results || [];
+    renderStats(allInvoices);
+    renderTable(allInvoices);
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+function renderStats(invoices) {
+  let totalBilled = 0;
+  let totalTax = 0;
+  invoices.forEach(inv => {
+    totalBilled += parseFloat(inv.total_amount || 0);
+    totalTax += parseFloat(inv.cgst || 0) + parseFloat(inv.sgst || 0);
+  });
+  
+  document.getElementById('stat-total-invoices').innerText = invoices.length;
+  document.getElementById('stat-total-billed').innerText = '₹' + totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  document.getElementById('stat-total-tax').innerText = '₹' + totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function renderTable(invoices) {
+  const tbody = document.getElementById('invoices-body');
+  if (!invoices || invoices.length === 0) {
+    tbody.innerHTML = emptyRow('No invoices found.', 10);
+    return;
+  }
+
+  tbody.innerHTML = invoices.map(inv => {
+    const formattedTotal = '₹' + parseFloat(inv.total_amount).toFixed(2);
+    const formattedBase = '₹' + parseFloat(inv.amount).toFixed(2);
+    const formattedTax = '₹' + (parseFloat(inv.cgst) + parseFloat(inv.sgst)).toFixed(2);
+    const formattedDelivery = '₹' + parseFloat(inv.delivery_fee).toFixed(2);
+    
+    // Status color badge class
+    let statusClass = 'pending';
+    if (inv.payment_status === 'paid') statusClass = 'allocated'; // reuse green badge
+    if (inv.payment_status === 'refunded') statusClass = 'cancelled'; // reuse red badge
+
+    return `
+      <tr>
+        <td><strong>${inv.invoice_number}</strong></td>
+        <td>${inv.consumer_name || 'Client #' + inv.consumer_id}</td>
+        <td>${inv.agency_name || 'Agency #' + inv.agency_id}</td>
+        <td>${formattedBase}</td>
+        <td>${formattedTax} <small class="text-muted">(18%)</small></td>
+        <td>${formattedDelivery}</td>
+        <td><strong>${formattedTotal}</strong></td>
+        <td><span class="badge badge-${statusClass}">${inv.payment_status}</span></td>
+        <td>${fmtDateTime(inv.issued_at)}</td>
+        <td style="text-align: right;">
+          <button class="btn btn-ghost btn-sm" onclick="viewInvoice(${inv.invoice_id})">
+            <i class="ti ti-eye"></i> View
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterInvoices() {
+  const searchVal = document.getElementById('search-invoice').value.toLowerCase();
+  const statusVal = document.getElementById('filter-status').value;
+  
+  const filtered = allInvoices.filter(inv => {
+    const matchSearch = inv.invoice_number.toLowerCase().includes(searchVal) ||
+                        (inv.consumer_name && inv.consumer_name.toLowerCase().includes(searchVal)) ||
+                        (inv.agency_name && inv.agency_name.toLowerCase().includes(searchVal));
+    const matchStatus = !statusVal || inv.payment_status === statusVal;
+    return matchSearch && matchStatus;
+  });
+  
+  renderTable(filtered);
+}
+
+function viewInvoice(invoiceId) {
+  const inv = allInvoices.find(i => i.invoice_id === invoiceId);
+  if (!inv) return;
+  
+  const printableArea = document.getElementById('printable-area');
+  const totalTax = parseFloat(inv.cgst) + parseFloat(inv.sgst);
+  
+  printableArea.innerHTML = `
+    <div class="invoice-print-header">
+      <div class="invoice-print-title">LPG Tax Invoice</div>
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">Commercial Gas Supply &amp; Distribution Corp</p>
+    </div>
+    <div class="invoice-print-meta">
+      <div>
+        <strong>Invoice Number:</strong> ${inv.invoice_number}<br>
+        <strong>Booking Reference ID:</strong> BK-${inv.booking_id}<br>
+        <strong>Date Issued:</strong> ${fmtDateTime(inv.issued_at)}
+      </div>
+      <div style="text-align: right;">
+        <strong>Agency:</strong> ${inv.agency_name || 'Associated LPG Distributor'}<br>
+        <strong>Consumer:</strong> ${inv.consumer_name || 'Registered Customer'}<br>
+        <strong>Mode of Payment:</strong> ${inv.payment_method}
+      </div>
+    </div>
+    <table class="invoice-print-table">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th class="amount">Rate</th>
+          <th class="amount" style="width: 60px; text-align: center;">Qty</th>
+          <th class="amount">Total Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>LPG Gas Cylinder Refill Supply</td>
+          <td class="amount">₹850.00</td>
+          <td class="amount" style="text-align: center;">${Math.round(parseFloat(inv.amount) / 850)}</td>
+          <td class="amount">₹${parseFloat(inv.amount).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>Central GST (CGST @ 9%)</td>
+          <td class="amount">9%</td>
+          <td class="amount" style="text-align: center;">-</td>
+          <td class="amount">₹${parseFloat(inv.cgst).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>State GST (SGST @ 9%)</td>
+          <td class="amount">9%</td>
+          <td class="amount" style="text-align: center;">-</td>
+          <td class="amount">₹${parseFloat(inv.sgst).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>Standard City Delivery &amp; Handling Fee</td>
+          <td class="amount">₹50.00</td>
+          <td class="amount" style="text-align: center;">1</td>
+          <td class="amount">₹${parseFloat(inv.delivery_fee).toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="invoice-print-total-box">
+      Total Payable (incl. all taxes): ₹${parseFloat(inv.total_amount).toFixed(2)}
+    </div>
+    <div style="text-align: center; margin-top: 25px; font-size: 11px; color: #64748b;">
+      * This is a computer generated tax invoice. No signature required. *<br>
+      Thank you for your business. For support raised complaints, visit customer service desk.
+    </div>
+  `;
+  
+  showModal('invoice-modal');
+}
+</script>
+</body>
+</html>

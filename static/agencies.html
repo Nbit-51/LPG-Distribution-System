@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agencies — LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Agencies</div>
+        <div class="page-sub">Manage LPG distribution agencies</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddAgencyModal()">+ Add Agency</button>
+    </div>
+        <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-weight:600;font-size:15px">Agency Locations</div>
+        <button class="btn btn-sm btn-secondary" onclick="locateUser()">?? Find Nearest Agency</button>
+      </div>
+      <div id="agency-map" style="width:100%;height:420px;border-radius:10px;z-index:0"></div>
+      <div id="nearest-agency" style="margin-top:10px;font-size:13px;color:#a5b4fc;display:none"></div>
+    </div>
+    <div class="card">
+      <div style="margin-bottom:15px">
+        <div class="search-box">
+          <span class="search-icon">??</span>
+          <input type="text" id="search-input" placeholder="Search agencies..." onkeyup="filterAgencies()">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Name</th><th>Location</th><th>Stock</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="agencies-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="agency-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Add Agency</h2>
+      <button class="modal-close" onclick="closeModal('agency-modal')">×</button>
+    </div>
+    <form onsubmit="saveAgency(event)">
+      <div class="form-group">
+        <label>Agency Name *</label>
+        <input type="text" id="agency-name" required>
+      </div>
+      <div class="form-group">
+        <label>Location *</label>
+        <input type="text" id="agency-location" required>
+      </div>
+            <div class="form-group">
+        <label>Latitude</label>
+        <input type="number" id="agency-lat" step="any" placeholder="e.g. 12.9716">
+      </div>
+      <div class="form-group">
+        <label>Longitude</label>
+        <input type="number" id="agency-lng" step="any" placeholder="e.g. 77.5946">
+      </div>
+      <div class="form-group">
+        <label>Contact Number</label>
+        <input type="tel" id="agency-phone">
+      </div>
+      <div class="form-group">
+        <label>Current Stock</label>
+        <input type="number" id="agency-stock" value="0">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('agency-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+requireAuth();
+renderSidebar('agencies');
+
+let allAgencies = [];
+
+async function loadAgencies() {
+  try {
+    const data = await api.get('/agencies');
+    allAgencies = data.results || [];
+    renderAgencies(allAgencies);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function renderAgencies(agencies) {
+  const tbody = document.getElementById('agencies-tbody');
+  tbody.innerHTML = agencies.length ? agencies.map(a => `<tr>
+    <td>#${a.agency_id}</td>
+    <td>${a.agency_name}</td>
+    <td>${a.address}</td>
+    <td><strong>${a.available_cylinders || 0}</strong> cylinders</td>
+    <td><span class="badge badge-${a.is_active ? 'allocated' : 'pending'}">${a.is_active ? 'Active' : 'Inactive'}</span></td>
+    <td>
+      <button class="btn btn-sm btn-secondary" onclick="editAgency(${a.agency_id})">Edit</button>
+    </td>
+  </tr>`).join('') : emptyRow('No agencies found');
+}
+
+function filterAgencies() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = allAgencies.filter(a =>
+    (a.agency_name || '').toLowerCase().includes(q) ||
+    (a.address || '').toLowerCase().includes(q)
+  );
+  renderAgencies(filtered);
+}
+
+function openAddAgencyModal() {
+  document.getElementById('agency-name').value = '';
+  document.getElementById('agency-location').value = '';
+  document.getElementById('agency-phone').value = '';
+  document.getElementById('agency-stock').value = '0';
+  delete document.getElementById('agency-modal').dataset.id;
+  document.querySelector('#agency-modal .modal-title').textContent = 'Add Agency';
+  document.getElementById('agency-modal').classList.add('show');
+}
+
+function editAgency(id) {
+  const agency = allAgencies.find(a => a.agency_id === id);
+  if (!agency) return;
+  document.getElementById('agency-name').value = agency.agency_name;
+  document.getElementById('agency-location').value = agency.address;
+  document.getElementById('agency-phone').value = agency.contact_number || '';
+  document.getElementById('agency-stock').value = agency.available_cylinders || 0;
+  document.querySelector('#agency-modal .modal-title').textContent = 'Edit Agency';
+  document.getElementById('agency-modal').dataset.id = id;
+  document.getElementById('agency-modal').classList.add('show');
+}
+
+async function saveAgency(e) {
+  e.preventDefault();
+  try {
+    const id = document.getElementById('agency-modal').dataset.id;
+    const payload = {
+      agency_name: document.getElementById('agency-name').value,
+      address: document.getElementById('agency-location').value,
+      contact_number: document.getElementById('agency-phone').value,
+      available_cylinders: parseInt(document.getElementById('agency-stock').value) || 0
+    };
+    if (id) {
+      await api.put(`/agencies/${id}`, payload);
+      toast('Agency updated', 'success');
+    } else {
+      await api.post('/agencies', payload);
+      toast('Agency added', 'success');
+    }
+    closeModal('agency-modal');
+    loadAgencies();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+loadAgencies();
+</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map, markersLayer;
+
+function initMap() {
+  map = L.map('agency-map').setView([12.9716, 77.5946], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+  if (typeof allAgencies !== 'undefined' && allAgencies.length) plotAgencies(allAgencies);
+}
+
+function plotAgencies(agencies) {
+  markersLayer.clearLayers();
+  const bounds = [];
+  agencies.forEach(a => {
+    const lat = parseFloat(a.latitude || a.lat);
+    const lng = parseFloat(a.longitude || a.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+    const color = a.is_active ? '#6366f1' : '#4b5563';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 6px rgba(0,0,0,0.4)"></div>`,
+      iconSize: [14,14], iconAnchor: [7,7]
+    });
+    const marker = L.marker([lat, lng], {icon});
+    marker.bindPopup(`
+      <b>${a.agency_name}</b><br>
+      ?? ${a.address || '—'}<br>
+      ?? ${a.contact_number || '—'}<br>
+      ${a.is_active ? '? Active' : '? Inactive'}
+    `);
+    markersLayer.addLayer(marker);
+    bounds.push([lat, lng]);
+  });
+  if (bounds.length) map.fitBounds(bounds, {padding:[30,30]});
+}
+
+function locateUser() {
+  if (!navigator.geolocation) { alert('Geolocation not supported.'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const userLat = pos.coords.latitude;
+    const userLng = pos.coords.longitude;
+    const youIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:#14b8a6;border:2px solid #fff"></div>',
+      iconSize:[14,14], iconAnchor:[7,7]
+    });
+    L.marker([userLat, userLng], {icon: youIcon}).addTo(map).bindPopup('?? You are here').openPopup();
+    map.setView([userLat, userLng], 13);
+    let nearest = null, minDist = Infinity;
+    allAgencies.forEach(a => {
+      const lat = parseFloat(a.latitude || a.lat);
+      const lng = parseFloat(a.longitude || a.lng);
+      if (isNaN(lat) || isNaN(lng) || !a.is_active) return;
+      const d = Math.sqrt((lat-userLat)**2 + (lng-userLng)**2);
+      if (d < minDist) { minDist = d; nearest = a; }
+    });
+    const el = document.getElementById('nearest-agency');
+    el.style.display = 'block';
+    el.innerHTML = nearest
+      ? '?? Nearest agency: <strong>' + nearest.agency_name + '</strong> — ' + (nearest.address || '')
+      : 'No agencies with coordinates found.';
+  }, () => alert('Could not get your location.'));
+}
+
+const _origRender = renderAgencies;
+renderAgencies = function(agencies) {
+  _origRender(agencies);
+  if (typeof map !== 'undefined') plotAgencies(agencies);
+};
+
+const _origSave = saveAgency;
+saveAgency = async function(e) {
+  e.preventDefault();
+  try {
+    const id = document.getElementById('agency-modal').dataset.id;
+    const payload = {
+      agency_name: document.getElementById('agency-name').value,
+      address: document.getElementById('agency-location').value,
+      contact_number: document.getElementById('agency-phone').value,
+      latitude: parseFloat(document.getElementById('agency-lat').value) || null,
+      longitude: parseFloat(document.getElementById('agency-lng').value) || null,
+    };
+    if (id) { await api.patch('/agencies/' + id, payload); showToast('Agency updated','success'); }
+    else     { await api.post('/agencies', payload);        showToast('Agency added','success'); }
+    closeModal('agency-modal');
+    loadAgencies();
+  } catch(err) { showToast(err.message,'error'); }
+};
+
+const _origEdit = editAgency;
+editAgency = function(id) {
+  _origEdit(id);
+  const a = allAgencies.find(x => x.agency_id === id);
+  if (a) {
+    document.getElementById('agency-lat').value = a.latitude || '';
+    document.getElementById('agency-lng').value = a.longitude || '';
+  }
+};
+
+window.addEventListener('load', initMap);
+</script>
+</body>
+</html>

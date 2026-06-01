@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LPG Consumer Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08080f;--bg2:#0e0e1c;--bg3:#13131f;
+  --border:rgba(255,255,255,0.07);
+  --text:#ddddf0;--text2:rgba(221,221,240,0.55);--text3:rgba(221,221,240,0.28);
+  --accent:#14b8a6;--accent2:#0d9488;--indigo:#6366f1;
+  --red:#ef4444;--green:#10b981;--yellow:#f59e0b;
+}
+body{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+@keyframes markerGlow {
+  0% { transform: scale(1); box-shadow: 0 0 6px rgba(20,184,166,0.6); }
+  50% { transform: scale(1.2); box-shadow: 0 0 18px rgba(20,184,166,0.95); }
+  100% { transform: scale(1); box-shadow: 0 0 6px rgba(20,184,166,0.6); }
+}
+.glow-marker {
+  animation: markerGlow 2.5s infinite ease-in-out;
+}
+.p-badge-verified { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+.p-badge-unverified { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+.p-badge-rejected { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+
+/* NAV */
+.portal-nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:200}
+.portal-nav-brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:var(--text)}
+.portal-nav-brand-icon{width:30px;height:30px;border-radius:7px;background:var(--accent);display:grid;place-items:center}
+.portal-nav-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.portal-nav-user{font-size:13px;color:var(--text2)}
+.portal-nav-user strong{color:var(--text)}
+.btn-signout{padding:7px 14px;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-signout:hover{background:rgba(239,68,68,0.18)}
+
+/* TABS */
+.portal-tabs{display:flex;gap:4px;padding:10px 28px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.portal-tab{padding:7px 16px;border:1px solid var(--border);border-radius:8px;background:none;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
+.portal-tab i{font-size:15px}
+.portal-tab.active{background:rgba(20,184,166,0.12);color:#5eead4;border-color:rgba(20,184,166,0.3)}
+.portal-tab:hover:not(.active){background:rgba(255,255,255,0.04);color:var(--text)}
+
+/* BODY */
+.portal-body{padding:24px 28px;max-width:980px}
+
+/* CARDS */
+.p-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:18px}
+.p-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02)}
+.p-card-title{font-size:14px;font-weight:600;color:var(--text)}
+.p-card-body{padding:18px}
+
+/* STATS */
+.p-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.p-stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.p-stat-val{font-size:26px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace}
+.p-stat-label{font-size:10.5px;color:var(--text3);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+
+/* FORMS */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:10px;font-weight:600;color:var(--text3);margin-bottom:7px;text-transform:uppercase;letter-spacing:.09em;font-family:'DM Mono',monospace}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:9px;font-size:13.5px;color:var(--text);outline:none;transition:border-color .2s,background .2s;font-family:'DM Sans',sans-serif}
+.form-group input:focus,.form-group select:focus{border-color:rgba(20,184,166,0.5);background:rgba(20,184,166,0.05)}
+.form-group input::placeholder{color:var(--text3)}
+.form-group select option{background:#1a1a2e;color:var(--text)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;width:100%;padding:12px;box-shadow:0 4px 18px rgba(20,184,166,0.25)}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--text2);border-color:var(--border);width:100%;padding:10px}
+.btn-outline:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.btn-danger{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.25)}
+.btn-danger:hover{background:rgba(239,68,68,0.25)}
+.btn-sm{padding:6px 13px;font-size:12px;width:auto}
+
+/* TABLES */
+.p-table{width:100%;border-collapse:collapse;font-size:13px}
+.p-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);font-family:'DM Mono',monospace}
+.p-table td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.p-table tr:last-child td{border-bottom:none}
+.p-table tr:hover td{background:rgba(255,255,255,0.02)}
+
+/* BADGES */
+.p-badge{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.p-badge-pending{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.25)}
+.p-badge-allocated{background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.25)}
+.p-badge-delivered{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.2)}
+.p-badge-cancelled{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(20,184,166,0.5),transparent);border-radius:18px 18px 0 0}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;color:var(--text)}
+.modal-body{padding:20px 24px 24px}
+
+/* PAYMENT */
+.pay-options{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.pay-option{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;font-size:13px;font-weight:500;color:var(--text2);background:rgba(255,255,255,0.02)}
+.pay-option:hover{border-color:rgba(20,184,166,0.3);background:rgba(20,184,166,0.05);color:var(--text)}
+.pay-option-icon{font-size:20px}
+.cod-box{text-align:center;padding:24px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:16px}
+
+/* QR */
+.qr-card{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px;display:flex;gap:16px;align-items:flex-start}
+.qr-img{width:110px;height:110px;border-radius:8px;object-fit:contain;border:1px solid var(--border);flex-shrink:0;background:#fff}
+
+/* PROFILE */
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.profile-item label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;font-family:'DM Mono',monospace;display:block;margin-bottom:3px}
+.profile-item span{font-size:13.5px;color:var(--text);font-weight:500}
+
+/* MAP */
+#consumer-map{width:100%;height:420px;border-radius:10px;z-index:0}
+.map-locate-btn{background:rgba(20,184,166,0.15);border:1px solid rgba(20,184,166,0.3);color:#5eead4;padding:7px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto;display:flex;align-items:center;gap:6px;transition:all .15s}
+.map-locate-btn:hover{background:rgba(20,184,166,0.25)}
+.map-legend{display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--text2)}
+.map-legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+
+/* MISC */
+.hidden{display:none!important}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:11px 16px;border-radius:10px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;min-width:220px;opacity:0;transform:translateX(16px);transition:opacity .25s,transform .25s;pointer-events:all}
+.toast.show{opacity:1;transform:translateX(0)}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+.toast.warning{border-left:3px solid var(--yellow)}
+
+/* SUPPORT PORTAL CUSTOM STYLES */
+.contact-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.contact-card {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.contact-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.contact-card i {
+  font-size: 22px;
+  color: var(--accent);
+}
+.contact-card.emergency {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.05);
+}
+.contact-card.emergency i {
+  color: #f87171;
+  animation: flash 1.5s infinite alternate;
+}
+@keyframes flash {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+.contact-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-family: 'DM Mono', monospace;
+}
+.contact-card-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.support-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  .support-grid {
+    grid-template-columns: 1.2fr 1fr;
+  }
+}
+
+.support-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+@media (max-width: 480px) {
+  .support-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.support-tile {
+  background: rgba(255,255,255,0.015);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.support-tile:hover {
+  border-color: var(--accent);
+  background: rgba(20, 184, 166, 0.04);
+  transform: translateY(-2px);
+}
+.support-tile.active {
+  border-color: var(--accent);
+  background: rgba(20, 184, 166, 0.1);
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.15);
+}
+.support-tile i {
+  font-size: 22px;
+  color: var(--accent);
+  margin-bottom: 6px;
+  display: block;
+}
+.support-tile span {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text2);
+}
+.support-tile.active span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.safety-advisory {
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text2);
+}
+.safety-advisory h4 {
+  color: #f87171;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.safety-advisory ol {
+  margin-left: 18px;
+  margin-top: 4px;
+}
+.safety-advisory li {
+  margin-bottom: 3px;
+}
+
+.faq-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+.faq-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.01);
+  transition: border-color 0.15s;
+}
+.faq-item:hover {
+  border-color: rgba(255,255,255,0.12);
+}
+.faq-question {
+  padding: 12px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+.faq-question i {
+  font-size: 14px;
+  color: var(--text3);
+  transition: transform 0.2s;
+}
+.faq-answer {
+  padding: 0 14px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+  display: none;
+}
+.faq-item.active {
+  border-color: rgba(20, 184, 166, 0.25);
+  background: rgba(20, 184, 166, 0.02);
+}
+.faq-item.active .faq-answer {
+  display: block;
+}
+.faq-item.active .faq-question i {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.ticket-row-main {
+  cursor: pointer;
+}
+.ticket-detail-row {
+  display: none;
+  background: rgba(255,255,255,0.01);
+}
+.ticket-detail-row.open {
+  display: table-row;
+}
+.ticket-detail-content {
+  padding: 14px 18px !important;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.5;
+  border-top: 1px dashed var(--border);
+}
+.ticket-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.ticket-detail-item label {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-family: 'DM Mono', monospace;
+  display: block;
+}
+.ticket-detail-item span {
+  font-size: 12.5px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* PRIORITY BADGES */
+.p-badge-low { background: rgba(156, 163, 175, 0.15); color: #d1d5db; border: 1px solid rgba(156, 163, 175, 0.25); }
+.p-badge-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+.p-badge-high { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+
+/* STATUS BADGES */
+.p-badge-open { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+.p-badge-in_progress { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.25); }
+.p-badge-resolved { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+.p-badge-closed { background: rgba(156, 163, 175, 0.15); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.25); }
+
+/* WHATSAPP FALLBACK BUTTONS */
+.whatsapp-fallback-banner {
+  background: rgba(37, 211, 102, 0.05);
+  border: 1px dashed rgba(37, 211, 102, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .whatsapp-fallback-banner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+}
+.wa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  background: rgba(37, 211, 102, 0.1);
+  color: #25d366;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.wa-btn:hover {
+  background: rgba(37, 211, 102, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.15);
+}
+</style>
+</head>
+<body><style>body{visibility:hidden}</style>
+
+<nav class="portal-nav">
+  <div class="portal-nav-brand">
+    <div class="portal-nav-brand-icon">
+      <svg width="16" height="16" viewBox="0 0 34 34" fill="none">
+        <rect x="2" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,0.9)"/>
+        <rect x="19" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,0.5)"/>
+        <rect x="2" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,0.5)"/>
+        <rect x="19" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,0.25)"/>
+      </svg>
+    </div>
+    LPG Consumer Portal
+  </div>
+  <div class="portal-nav-right">
+    <span class="portal-nav-user">Hello, <strong id="nav-name">User</strong></span>
+    <button class="btn-signout" onclick="doLogout()"><i class="ti ti-power"></i> Sign Out</button>
+  </div>
+</nav>
+
+<div class="portal-tabs">
+  <button class="portal-tab active" onclick="showSection('home')"><i class="ti ti-home"></i> Home</button>
+  <button class="portal-tab" onclick="showSection('book')"><i class="ti ti-cylinder"></i> Book Cylinder</button>
+  <button class="portal-tab" onclick="showSection('bookings')"><i class="ti ti-clipboard-list"></i> My Bookings</button>
+  <button class="portal-tab" onclick="showSection('nearby')"><i class="ti ti-map-pin"></i> Nearby</button>
+  <button class="portal-tab" onclick="showSection('qrcodes')"><i class="ti ti-qrcode"></i> My QR Codes</button>
+  <button class="portal-tab" onclick="showSection('support')"><i class="ti ti-headset"></i> Support</button>
+  <button class="portal-tab" onclick="showSection('invoices')"><i class="ti ti-receipt"></i> Invoices</button>
+  <button class="portal-tab" id="tab-kyc" onclick="showSection('kyc')"><i class="ti ti-shield-check"></i> KYC Verification</button>
+</div>
+
+<div class="portal-body">
+
+  <!-- HOME -->
+  <div id="sec-home">
+    <div id="kyc-warning-banner" class="safety-advisory hidden" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.25); color: #fca5a5; margin-bottom: 18px;">
+      <h4 style="color:#f87171; display:flex; align-items:center; gap:6px;"><i class="ti ti-shield-alert"></i> KYC Verification Required</h4>
+      <p style="margin-top:4px;">You have not completed your KYC verification. The backend cylinder booking service blocks all orders for unverified accounts. <a href="javascript:void(0)" onclick="showSection('kyc')" style="color:#5eead4; font-weight:600; text-decoration:underline;">Submit your documents now</a> to unlock ordering.</p>
+    </div>
+    <div class="p-stats" id="home-stats">
+      <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Total Bookings</div></div>
+      <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Delivered</div></div>
+      <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Pending</div></div>
+      <div class="p-stat"><div class="p-stat-val">-</div><div class="p-stat-label">Cancelled</div></div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-header"><i class="ti ti-user" style="color:#5eead4;font-size:16px"></i><span class="p-card-title">My Account</span></div>
+      <div class="p-card-body" id="home-profile"><span class="spinner"></span> Loading...</div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-header"><i class="ti ti-clock" style="color:#5eead4;font-size:16px"></i><span class="p-card-title">Recent Bookings</span></div>
+      <div style="overflow-x:auto">
+        <table class="p-table">
+          <thead><tr><th>#</th><th>Date</th><th>Cylinders</th><th>Status</th><th>Delivery</th></tr></thead>
+          <tbody id="home-bookings"><tr><td colspan="5" style="padding:20px;text-align:center"><span class="spinner"></span></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOK -->
+  <div id="sec-book" style="display:none">
+    <div class="p-card">
+      <div class="p-card-header"><i class="ti ti-cylinder" style="color:#5eead4;font-size:16px"></i><span class="p-card-title">Book LPG Cylinder</span></div>
+      <div class="p-card-body">
+        <div class="form-group">
+          <label>Number of Cylinders</label>
+          <select id="b-qty">
+            <option value="1">1 Cylinder</option>
+            <option value="2">2 Cylinders</option>
+            <option value="3">3 Cylinders</option>
+            <option value="4">4 Cylinders</option>
+            <option value="5">5 Cylinders</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Delivery Date</label><input type="date" id="b-date"></div>
+        <div class="form-group"><label>Delivery Address</label><input type="text" id="b-addr" placeholder="Full delivery address"></div>
+        <button class="btn btn-primary" onclick="openPayment()"><i class="ti ti-arrow-right"></i> Proceed to Payment</button>
+        
+        <div class="whatsapp-fallback-banner">
+          <div style="flex-grow:1;">
+            <div style="font-weight:600;color:var(--text);font-size:13.5px;display:flex;align-items:center;gap:6px"><i class="ti ti-brand-whatsapp" style="color:#25d366;font-size:16px"></i> Portal Offline?</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:4px;margin-bottom:8px;">Place a secure booking request instantly via WhatsApp Business.</div>
+            <input type="tel" id="wa-phone-consumer" placeholder="Optional: Recipient WhatsApp Number (e.g. 9876543210)" style="padding:8px 12px;font-size:11.5px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:var(--text);width:100%;outline:none;font-family:inherit;" oninput="updateWABookingLink()"/>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;min-width:130px;">
+            <a href="#" id="wa-booking-link" target="_blank" class="wa-btn" onclick="updateWABookingLink(this)">
+              <i class="ti ti-brand-whatsapp"></i> Book via WA
+            </a>
+            <button class="wa-btn" style="background:rgba(255,255,255,0.05);border-color:var(--border);color:var(--text2);" onclick="copyWABookingText()" title="Copy booking message to clipboard">
+              <i class="ti ti-copy"></i> Copy Text
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY BOOKINGS -->
+  <div id="sec-bookings" style="display:none">
+    <div class="p-card">
+      <div class="p-card-header"><i class="ti ti-clipboard-list" style="color:#5eead4;font-size:16px"></i><span class="p-card-title">My Bookings</span></div>
+      <div style="overflow-x:auto">
+        <table class="p-table">
+          <thead><tr><th>#</th><th>Date</th><th>Cylinders</th><th>Agency</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="my-bookings-body"><tr><td colspan="6" style="padding:20px;text-align:center"><span class="spinner"></span></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEARBY -->
+  <div id="sec-nearby" style="display:none">
+    <div class="p-card">
+      <div class="p-card-header">
+        <i class="ti ti-map-pin" style="color:#5eead4;font-size:16px"></i>
+        <span class="p-card-title">Find Nearest Agency</span>
+        <button class="map-locate-btn" onclick="locateConsumer()"><i class="ti ti-current-location"></i> Use My Location</button>
+      </div>
+      <div class="p-card-body">
+        <div id="consumer-map"></div>
+        <div id="consumer-nearest" style="display:none;margin-top:12px;padding:12px 16px;background:rgba(20,184,166,0.08);border:1px solid rgba(20,184,166,0.2);border-radius:10px;font-size:13px;color:#5eead4"></div>
+        <div class="map-legend">
+          <span><span class="map-legend-dot" style="background:#14b8a6"></span>Active Agency</span>
+          <span><span class="map-legend-dot" style="background:#4b5563"></span>Inactive</span>
+          <span><span class="map-legend-dot" style="background:#6366f1"></span>Your Location</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY QR CODES -->
+  <div id="sec-qrcodes" style="display:none">
+    <div class="p-card">
+      <div class="p-card-header"><i class="ti ti-qrcode" style="color:#5eead4;font-size:16px"></i><span class="p-card-title">My Delivery QR Codes</span></div>
+      <div class="p-card-body">
+        <p style="color:var(--text3);font-size:13px;margin-bottom:16px">Show this QR code to the delivery agent to confirm receipt of your cylinders.</p>
+        <div id="qr-list"><span class="spinner"></span> Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPORT PORTAL -->
+  <div id="sec-support" style="display:none">
+    
+    <!-- Contact Strip -->
+    <div class="contact-strip">
+      <div class="contact-card emergency">
+        <i class="ti ti-flame"></i>
+        <div>
+          <div class="contact-card-title">24x7 Gas Emergency</div>
+          <div class="contact-card-value">Call 1906</div>
+        </div>
+      </div>
+      <div class="contact-card">
+        <i class="ti ti-phone-call"></i>
+        <div>
+          <div class="contact-card-title">Helpline Toll-Free</div>
+          <div class="contact-card-value">1800-233-3555</div>
+        </div>
+      </div>
+      <div class="contact-card">
+        <i class="ti ti-mail"></i>
+        <div>
+          <div class="contact-card-title">Email Support</div>
+          <div class="contact-card-value">support@lpgportal.com</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="support-grid">
+      
+      <!-- Support Submission Panel -->
+      <div>
+        <div class="p-card">
+          <div class="p-card-header">
+            <i class="ti ti-message-2-question" style="color:#5eead4;font-size:16px"></i>
+            <span class="p-card-title">Submit Support Ticket</span>
+          </div>
+          <div class="p-card-body">
+            
+            <!-- Category Tiles -->
+            <div class="form-group">
+              <label>Select Category</label>
+              <div class="support-tiles" id="support-category-tiles">
+                <div class="support-tile" onclick="selectSupportCategory('delivery_not_received', this)">
+                  <i class="ti ti-truck-off"></i>
+                  <span>Delivery Missing</span>
+                </div>
+                <div class="support-tile" onclick="selectSupportCategory('damaged_cylinder', this)">
+                  <i class="ti ti-alert-triangle"></i>
+                  <span>Damaged Cylinder</span>
+                </div>
+                <div class="support-tile" onclick="selectSupportCategory('booking_issue', this)">
+                  <i class="ti ti-clipboard-x"></i>
+                  <span>Booking Issue</span>
+                </div>
+                <div class="support-tile" onclick="selectSupportCategory('billing', this)">
+                  <i class="ti ti-credit-card"></i>
+                  <span>Billing / Refund</span>
+                </div>
+                <div class="support-tile" onclick="selectSupportCategory('delayed_delivery', this)">
+                  <i class="ti ti-clock"></i>
+                  <span>Delayed Delivery</span>
+                </div>
+                <div class="support-tile" onclick="selectSupportCategory('other', this)">
+                  <i class="ti ti-help"></i>
+                  <span>Other Queries</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form -->
+            <form id="support-form" onsubmit="event.preventDefault(); submitSupportTicket();">
+              <!-- Hidden or backing category input -->
+              <input type="hidden" id="s-category" value="other">
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Linked Booking (Optional)</label>
+                  <select id="s-booking-id">
+                    <option value="">-- No linked booking --</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Priority</label>
+                  <select id="s-priority" onchange="onPriorityOrCategoryChange()">
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High (Urgent / Safety)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- LPG Safety Advisory Warning (Indian standard/OECD safety rules) -->
+              <div class="safety-advisory hidden" id="support-safety-advisory">
+                <h4><i class="ti ti-alert-circle"></i> LPG SAFETY PROTOCOL</h4>
+                <p>If you have a damaged cylinder, suspect a gas leak, or smell gas:</p>
+                <ol>
+                  <li>Extinguish all open flames/fires. Do NOT light matches or lighters.</li>
+                  <li>Do NOT operate electrical switches, appliances, or phone inside the area.</li>
+                  <li>Turn off the cylinder regulator switch immediately.</li>
+                  <li>Open all doors and windows to ventilate the property.</li>
+                  <li>Evacuate all occupants and call the 24x7 Emergency Line <strong>1906</strong> immediately!</li>
+                </ol>
+              </div>
+
+              <div class="form-group">
+                <label>Subject</label>
+                <input type="text" id="s-subject" placeholder="Summarise your issue..." required>
+              </div>
+
+              <div class="form-group">
+                <label>Detailed Description</label>
+                <textarea id="s-description" rows="4" placeholder="Explain the problem in detail so our agents can assist you..." required></textarea>
+              </div>
+
+              <button class="btn btn-primary" type="submit" id="support-submit-btn">
+                <i class="ti ti-send"></i> Submit Support Ticket
+              </button>
+            </form>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQs Sidebar -->
+      <div>
+        <div class="faq-section">
+          <div class="faq-title">
+            <i class="ti ti-help-circle" style="color:var(--accent)"></i>
+            <span>Frequently Asked Questions</span>
+          </div>
+          <div class="faq-list">
+            <div class="faq-item" onclick="toggleFAQ(this)">
+              <div class="faq-question">What should I do in case of a gas leak? <i class="ti ti-chevron-down"></i></div>
+              <div class="faq-answer">Safety first! Turn off the regulator immediately, open all doors/windows, do NOT touch electrical switches, and vacate the area. Call the national emergency helpline <strong>1906</strong> immediately. Do not submit a support ticket for active gas leak emergency services.</div>
+            </div>
+            <div class="faq-item" onclick="toggleFAQ(this)">
+              <div class="faq-question">What is the standard delivery timeline (SLA)? <i class="ti ti-chevron-down"></i></div>
+              <div class="faq-answer">Refill cylinders are usually delivered within 24 to 48 hours of booking confirmation. You can check the live status of your booking under the 'My Bookings' tab.</div>
+            </div>
+            <div class="faq-item" onclick="toggleFAQ(this)">
+              <div class="faq-question">Why was my booking cancelled? <i class="ti ti-chevron-down"></i></div>
+              <div class="faq-answer">Bookings are automatically cancelled if they violate quota regulations, if the minimum gap between refills has not been reached, or due to payment verification failures. You can link your cancelled booking to a support ticket to inquire about refunds.</div>
+            </div>
+            <div class="faq-item" onclick="toggleFAQ(this)">
+              <div class="faq-question">How does the delivery verification work? <i class="ti ti-chevron-down"></i></div>
+              <div class="faq-answer">Upon delivery, show the QR code from the 'My QR Codes' tab to the delivery agent. Once the agent scans the QR code, the status updates to 'Delivered' automatically.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- My Tickets Tracker -->
+    <div class="p-card">
+      <div class="p-card-header">
+        <i class="ti ti-list" style="color:#5eead4;font-size:16px"></i>
+        <span class="p-card-title">My Tickets Tracker</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="p-table">
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Date Created</th>
+              <th>Category</th>
+              <th>Subject</th>
+              <th>Priority</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="support-tickets-body">
+            <tr>
+              <td colspan="6" style="padding:20px;text-align:center;color:var(--text3)">
+                No tickets submitted yet.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal">
+    <div class="modal-header">Complete Payment</div>
+    <div class="modal-body">
+      <div id="pay-step-select">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Select a payment method:</p>
+        <div class="pay-options">
+          <div class="pay-option" onclick="selectPay('upi')"><span class="pay-option-icon">📱</span><div><div style="font-weight:600;color:var(--text)">UPI Payment</div><div style="font-size:12px;color:var(--text3)">Pay via any UPI app</div></div></div>
+          <div class="pay-option" onclick="selectPay('card')"><span class="pay-option-icon">💳</span><div><div style="font-weight:600;color:var(--text)">Card Payment</div><div style="font-size:12px;color:var(--text3)">Debit or credit card</div></div></div>
+          <div class="pay-option" onclick="selectPay('cod')"><span class="pay-option-icon">💵</span><div><div style="font-weight:600;color:var(--text)">Cash on Delivery</div><div style="font-size:12px;color:var(--text3)">Pay when delivered</div></div></div>
+        </div>
+        <button class="btn btn-outline" onclick="closePayment()">Cancel</button>
+      </div>
+      <div id="pay-step-upi" style="display:none">
+        <div style="text-align:center;padding:20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;margin-bottom:16px"><div style="font-size:38px;margin-bottom:8px">📱</div><div style="font-size:13px;color:var(--text3)">UPI ID: lpg@distribution</div></div>
+        <div class="form-group"><label>Your UPI ID</label><input type="text" id="upi-id" placeholder="yourname@upi"></div>
+        <button class="btn btn-primary" onclick="confirmBooking('upi')">Confirm Payment</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="backToPay()">Back</button>
+      </div>
+      <div id="pay-step-card" style="display:none">
+        <div class="form-group"><label>Card Number</label><input type="text" placeholder="1234 5678 9012 3456" maxlength="19"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Expiry</label><input type="text" placeholder="MM/YY"></div>
+          <div class="form-group"><label>CVV</label><input type="text" placeholder="123" maxlength="3"></div>
+        </div>
+        <div class="form-group"><label>Cardholder Name</label><input type="text" placeholder="Name on card"></div>
+        <button class="btn btn-primary" onclick="confirmBooking('card')">Pay Now</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="backToPay()">Back</button>
+      </div>
+      <div id="pay-step-cod" style="display:none">
+        <div class="cod-box"><div style="font-size:36px;margin-bottom:10px">💵</div><div style="font-weight:600;font-size:15px;color:var(--text)">Cash on Delivery</div><div style="font-size:13px;color:var(--text2);margin-top:6px">Please keep <strong id="cod-amount" style="color:var(--accent)">Rs. 950</strong> ready when the delivery agent arrives.</div></div>
+        <button class="btn btn-primary" onclick="confirmBooking('cod')">Confirm Booking</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="backToPay()">Back</button>
+      </div>
+      <div id="pay-step-done" style="display:none">
+        <div style="text-align:center;padding:28px 20px">
+          <div style="width:56px;height:56px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><i class="ti ti-check" style="font-size:26px;color:#34d399"></i></div>
+          <div style="font-size:17px;font-weight:600;color:var(--text);margin-bottom:8px">Booking Confirmed!</div>
+          <p style="font-size:13px;color:var(--text2)">Your booking has been placed. A QR code will be generated once allocated.</p>
+          <button class="btn btn-primary" style="margin-top:20px" onclick="closePayment();showSection('bookings')">View My Bookings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var consumerData = null;
+var consumerMap = null;
+var consumerMarkers = null;
+
+// ── Auth ──────────────────────────────────────────────────────────
+function doLogout() {
+  localStorage.removeItem('lpg_consumer_token');
+  localStorage.removeItem('lpg_consumer');
+  window.location.href = '/';
+}
+
+function authToken() { return localStorage.getItem('lpg_consumer_token'); }
+
+async function authFetch(url, opts) {
+  var options = opts || {};
+  options.headers = Object.assign({'Authorization':'Bearer '+authToken(),'Content-Type':'application/json'}, options.headers||{});
+  var res = await fetch(url, options);
+  if (!res.ok) { var err = await res.json().catch(function(){return {};}); throw new Error(err.detail||'Request failed'); }
+  return res.json();
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+window.addEventListener('load', function() {
+  document.body.style.visibility="visible"; var token = localStorage.getItem('lpg_consumer_token');
+  var stored = localStorage.getItem('lpg_consumer');
+  if (!token || !stored) { window.location.href = '/?role=consumer'; return; }
+  consumerData = JSON.parse(stored);
+  document.getElementById('nav-name').textContent = consumerData.name || 'User';
+  loadHome();
+});
+
+// ── Sections ──────────────────────────────────────────────────────
+var SECTIONS = ['home','book','bookings','nearby','qrcodes','support','invoices','kyc'];
+
+function showSection(sec) {
+  SECTIONS.forEach(function(s) {
+    var el = document.getElementById('sec-'+s);
+    if (el) el.style.display = (s===sec) ? '' : 'none';
+  });
+  document.querySelectorAll('.portal-tab').forEach(function(t,i) {
+    t.classList.toggle('active', SECTIONS[i]===sec);
+  });
+  if (sec==='bookings') loadMyBookings();
+  if (sec==='qrcodes')  loadMyQRs();
+  if (sec==='home')     loadHome();
+  if (sec==='nearby')   initMap();
+  if (sec==='support')  loadSupportTab();
+  if (sec==='invoices') loadMyInvoices();
+  if (sec==='kyc')      loadKYCDashboard();
+}
+
+// ── Home ──────────────────────────────────────────────────────────
+async function loadHome() {
+  try {
+    var data = await authFetch('/auth/consumer/me');
+    consumerData = data;
+    localStorage.setItem('lpg_consumer', JSON.stringify(data));
+    
+    // Render KYC warning banner
+    var banner = document.getElementById('kyc-warning-banner');
+    if (data.kyc_status !== 'verified') {
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+    
+    var bdata = await authFetch('/bookings/?consumer_id='+consumerData.consumer_id+'&page_size=20');
+    var rows = bdata.results || bdata || [];
+    var delivered = rows.filter(function(b){return b.status==='delivered';}).length;
+    var pending   = rows.filter(function(b){return b.status==='pending';}).length;
+    var cancelled = rows.filter(function(b){return b.status==='cancelled';}).length;
+    document.getElementById('home-stats').innerHTML =
+      stat(rows.length,'Total Bookings','var(--text)')+
+      stat(delivered,'Delivered','#34d399')+
+      stat(pending,'Pending','#fbbf24')+
+      stat(cancelled,'Cancelled','#f87171');
+    var kycBadge = '<span class="p-badge p-badge-' + (data.kyc_status || 'unverified') + '">' + (data.kyc_status || 'unverified').toUpperCase() + '</span>';
+    document.getElementById('home-profile').innerHTML =
+      '<div class="profile-grid">'+
+      pi('Full Name', data.full_name||'--')+
+      pi('Phone', data.phone||'--')+
+      pi('Consumer Type', data.consumer_type||'--')+
+      pi('Address', data.address||'--')+
+      pi('KYC Status', kycBadge)+
+      '</div>';
+    var badge={pending:'p-badge-pending',allocated:'p-badge-allocated',delivered:'p-badge-delivered',cancelled:'p-badge-cancelled'};
+    document.getElementById('home-bookings').innerHTML = rows.length
+      ? rows.slice(0,5).map(function(b){
+          return '<tr><td>#'+b.booking_id+'</td><td>'+(b.booking_date?b.booking_date.split('T')[0]:'--')+'</td><td>'+b.cylinders_requested+'</td><td><span class="p-badge '+(badge[b.status]||'')+'">'+b.status+'</span></td><td>'+(b.delivery_date||'--')+'</td></tr>';
+        }).join('')
+      : '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text3)">No bookings yet</td></tr>';
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function stat(val,label,color){return '<div class="p-stat"><div class="p-stat-val" style="color:'+color+'">'+val+'</div><div class="p-stat-label">'+label+'</div></div>';}
+function pi(label,val){return '<div class="profile-item"><label>'+label+'</label><span>'+val+'</span></div>';}
+
+// ── My Bookings ───────────────────────────────────────────────────
+async function loadMyBookings() {
+  document.getElementById('my-bookings-body').innerHTML='<tr><td colspan="6" style="padding:20px;text-align:center"><span class="spinner"></span></td></tr>';
+  try {
+    var data = await authFetch('/bookings/?consumer_id='+consumerData.consumer_id+'&page_size=50');
+    var rows = data.results || data || [];
+    var badge={pending:'p-badge-pending',allocated:'p-badge-allocated',delivered:'p-badge-delivered',cancelled:'p-badge-cancelled'};
+    document.getElementById('my-bookings-body').innerHTML = rows.length
+      ? rows.map(function(b){
+          var trackBtn = '<button class="btn btn-sm btn-outline" style="width:auto;padding:5px 10px;margin-right:5px;display:inline-flex" onclick="openBookingDetail('+b.booking_id+')">Track</button>';
+          var cancelBtn=(b.status==='pending')?'<button class="btn btn-sm btn-danger" style="width:auto;padding:5px 10px;display:inline-flex" onclick="cancelBooking('+b.booking_id+')">Cancel</button>':'';
+          return '<tr><td>#'+b.booking_id+'</td><td>'+(b.booking_date?b.booking_date.split('T')[0]:'--')+'</td><td>'+b.cylinders_requested+'</td><td>'+(b.agency_name||'--')+'</td><td><span class="p-badge '+(badge[b.status]||'')+'">'+b.status+'</span></td><td>'+trackBtn+cancelBtn+'</td></tr>';
+        }).join('')
+      : '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3)">No bookings yet</td></tr>';
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function cancelBooking(id) {
+  if (!confirm('Cancel booking #'+id+'?')) return;
+  try {
+    await authFetch('/bookings/'+id+'/cancel',{method:'POST',body:JSON.stringify({})});
+    toast('Booking cancelled','success');
+    loadMyBookings();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ── QR Codes ──────────────────────────────────────────────────────
+async function loadMyQRs() {
+  document.getElementById('qr-list').innerHTML='<span class="spinner"></span> Loading...';
+  try {
+    var data = await authFetch('/bookings/?consumer_id='+consumerData.consumer_id+'&page_size=50');
+    var rows = (data.results||data||[]).filter(function(b){return b.status==='allocated'||b.status==='delivered';});
+    if (!rows.length) { document.getElementById('qr-list').innerHTML='<div class="empty-state"><div style="font-size:32px;margin-bottom:12px">📱</div><p>No QR codes yet. QR codes appear after your booking is allocated.</p></div>'; return; }
+    var html='';
+    for (var i=0;i<rows.length;i++) {
+      var b=rows[i];
+      try {
+        var qr=await fetch('/qr/'+b.booking_id).then(function(r){return r.json();});
+        var bdg=b.status==='delivered'?'<span class="p-badge p-badge-delivered">Delivered</span>':'<span class="p-badge p-badge-allocated">Allocated</span>';
+        html+='<div class="qr-card"><img class="qr-img" src="'+(qr.qr_image_base64||'')+'" alt="QR"><div style="flex:1"><div style="font-weight:600;margin-bottom:4px;color:var(--text)">Booking #'+b.booking_id+'</div><div style="font-size:12px;color:var(--text2);margin-bottom:8px">'+b.cylinders_requested+' cylinder(s) &bull; '+(b.agency_name||'--')+'</div>'+bdg+'<div style="margin-top:10px"><a href="/qr/'+b.booking_id+'/download" target="_blank" class="btn btn-sm btn-outline" style="width:auto;display:inline-flex"><i class="ti ti-download"></i> Download QR</a></div></div></div>';
+      } catch(e) { html+='<div class="qr-card"><div style="color:var(--text3);font-size:13px">QR not yet generated for booking #'+b.booking_id+'</div></div>'; }
+    }
+    document.getElementById('qr-list').innerHTML=html;
+  } catch(e) { document.getElementById('qr-list').innerHTML='<p style="color:#f87171">Failed to load QR codes.</p>'; }
+}
+
+// ── Map / Nearby ──────────────────────────────────────────────────
+function initMap() {
+  if (consumerMap) { consumerMap.invalidateSize(); return; }
+  consumerMap = L.map('consumer-map').setView([20.5937,78.9629],5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; OpenStreetMap contributors',maxZoom:19
+  }).addTo(consumerMap);
+  consumerMarkers = L.layerGroup().addTo(consumerMap);
+  loadAgencyMarkers();
+}
+
+async function loadAgencyMarkers() {
+  try {
+    var data = await fetch('/agencies/?page_size=100').then(function(r){return r.json();});
+    var agencies = data.results||data.agencies||data||[];
+    consumerMarkers.clearLayers();
+    var bounds=[];
+    agencies.forEach(function(a) {
+      var lat=parseFloat(a.latitude), lng=parseFloat(a.longitude);
+      if (isNaN(lat)||isNaN(lng)) return;
+      var color=a.is_active?'#14b8a6':'#4b5563';
+      var size=a.is_active?20:14;
+      var glowClass=a.is_active?'glow-marker':'';
+      var icon=L.divIcon({
+        className:'',
+        html:'<div class="'+glowClass+'" style="width:'+size+'px;height:'+size+'px;border-radius:50%;background:'+color+';border:2px solid #fff;box-shadow:0 0 10px '+color+'"></div>',
+        iconSize:[size,size],
+        iconAnchor:[size/2,size/2]
+      });
+      var m=L.marker([lat,lng],{icon:icon});
+      m.agencyData=a;
+      m.bindPopup('<div style="font-family:DM Sans,sans-serif;min-width:160px"><div style="font-weight:600;margin-bottom:4px">'+a.agency_name+'</div><div style="font-size:12px;color:#666">'+(a.address||'—')+'</div>'+(a.contact_number?'<div style="font-size:12px;margin-top:4px">📞 '+a.contact_number+'</div>':'')+'<div style="margin-top:6px"><span style="background:'+(a.is_active?'#d1fae5':'#fee2e2')+';color:'+(a.is_active?'#065f46':'#991b1b')+';padding:2px 8px;border-radius:20px;font-size:11px">'+(a.is_active?'Active':'Inactive')+'</span></div></div>');
+      consumerMarkers.addLayer(m);
+      bounds.push([lat,lng]);
+    });
+    if (bounds.length) consumerMap.fitBounds(bounds,{padding:[40,40]});
+  } catch(e) { console.error('Map load error:',e); }
+}
+
+function getHaversineDistance(lat1, lon1, lat2, lon2) {
+  var R = 6371; // km
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function locateConsumer() {
+  if (!navigator.geolocation) { toast('Geolocation not supported','error'); return; }
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var userLat=pos.coords.latitude, userLng=pos.coords.longitude;
+    var youIcon=L.divIcon({className:'',html:'<div style="width:16px;height:16px;border-radius:50%;background:#6366f1;border:2px solid #fff;box-shadow:0 0 10px rgba(99,102,241,0.6)"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+    L.marker([userLat,userLng],{icon:youIcon}).addTo(consumerMap).bindPopup('<b>Your Location</b>').openPopup();
+    consumerMap.setView([userLat,userLng],12);
+    
+    // Calculate Haversine distance and sort agencies
+    var sorted = [];
+    consumerMarkers.eachLayer(function(m) {
+      if (!m.agencyData) return;
+      var lat=parseFloat(m.agencyData.latitude), lng=parseFloat(m.agencyData.longitude);
+      if (isNaN(lat)||isNaN(lng)) return;
+      var dist = getHaversineDistance(userLat, userLng, lat, lng);
+      sorted.push({ marker: m, agency: m.agencyData, dist: dist });
+    });
+    
+    sorted.sort(function(a,b){return a.dist - b.dist;});
+    
+    var el=document.getElementById('consumer-nearest');
+    el.style.display='block';
+    
+    if (sorted.length) {
+      var html = '<div style="font-weight:600;margin-bottom:8px;"><i class="ti ti-map-pin"></i> Nearest Agencies (Sorted by Distance):</div><div style="display:flex;flex-direction:column;gap:8px;">';
+      // Take top 5 nearest
+      var limit = Math.min(sorted.length, 5);
+      for (var k=0; k<limit; k++) {
+        var item = sorted[k];
+        var a = item.agency;
+        var km = item.dist.toFixed(2);
+        var activeBadge = a.is_active ? '<span style="color:#34d399;font-size:11px;font-weight:bold;">[ACTIVE]</span>' : '<span style="color:#ef4444;font-size:11px;font-weight:bold;">[INACTIVE]</span>';
+        
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);">' +
+                '  <div>' +
+                '    <strong>' + a.agency_name + '</strong> <small style="color:var(--text3)">(' + a.region + ')</small><br>' +
+                '    <small style="color:var(--text2)">' + (a.address || '') + '</small>' +
+                '  </div>' +
+                '  <div style="text-align:right;flex-shrink:0;margin-left:10px;">' +
+                '    <strong style="color:var(--accent)">' + km + ' km</strong><br>' +
+                '    ' + activeBadge + ' ' +
+                '    <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;margin-top:4px;display:inline-block;" onclick="focusOnAgency(' + a.latitude + ',' + a.longitude + ')">Focus</button>' +
+                '  </div>' +
+                '</div>';
+      }
+      html += '</div>';
+      el.innerHTML = html;
+      
+      // Open popup for the absolute nearest
+      if (sorted[0].agency.is_active) {
+        sorted[0].marker.openPopup();
+      }
+    } else {
+      el.innerHTML = 'No agencies found in range.';
+    }
+  }, function(){ toast('Could not retrieve geolocation data. Ensure location permissions are enabled.','error'); });
+}
+
+function focusOnAgency(lat, lng) {
+  if (consumerMap) {
+    consumerMap.setView([lat, lng], 15);
+  }
+}
+
+function getWABookingMessage() {
+  var qty = document.getElementById('b-qty').value;
+  var date = document.getElementById('b-date').value || 'Not specified';
+  var addr = document.getElementById('b-addr').value || 'Not specified';
+  
+  var baseMsg = "Hi, the website is experiencing issues. I would like to book an LPG cylinder via WhatsApp.";
+  
+  if (window.consumerData) {
+    baseMsg += "\n\nMy Details:\n- Name: " + (consumerData.full_name || consumerData.name || 'N/A') + 
+               "\n- Registered Phone: " + (consumerData.phone || 'N/A') + 
+               "\n- Consumer ID: " + (consumerData.consumer_id || 'N/A') + 
+               "\n- Agency ID: " + (consumerData.agency_id || 'N/A');
+  }
+  
+  baseMsg += "\n\nOrder Details:\n- Quantity: " + qty + " Cylinder(s)" + 
+             "\n- Requested Date: " + date + 
+             "\n- Delivery Address: " + addr;
+  return baseMsg;
+}
+
+function updateWABookingLink(el) {
+  var msg = getWABookingMessage();
+  var phoneInput = document.getElementById('wa-phone-consumer').value.trim();
+  var cleanPhone = phoneInput.replace(/\D/g, '');
+  if (cleanPhone && !cleanPhone.startsWith('91') && cleanPhone.length === 10) {
+    cleanPhone = '91' + cleanPhone;
+  }
+  
+  var targetEl = el || document.getElementById('wa-booking-link');
+  if (cleanPhone) {
+    targetEl.href = "https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(msg);
+  } else {
+    targetEl.href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
+  }
+}
+
+function copyWABookingText() {
+  var msg = getWABookingMessage();
+  navigator.clipboard.writeText(msg).then(function() {
+    toast('Booking details copied to clipboard!', 'success');
+  }).catch(function() {
+    alert("Failed to copy. Message details:\n" + msg);
+  });
+}
+
+
+// ── Payment ───────────────────────────────────────────────────────
+var selectedPay=null;
+function openPayment() {
+  if (consumerData.kyc_status !== 'verified') {
+    toast('KYC verification is required before booking a cylinder.', 'error');
+    showSection('kyc');
+    return;
+  }
+  var qty=document.getElementById('b-qty').value;
+  var date=document.getElementById('b-date').value;
+  var addr=document.getElementById('b-addr').value.trim();
+  if (!date||!addr){toast('Please fill delivery date and address','error');return;}
+  document.getElementById('cod-amount').textContent='Rs. '+(parseInt(qty)*950);
+  document.getElementById('payment-modal').classList.add('open');
+  showPayStep('select');
+}
+function closePayment(){document.getElementById('payment-modal').classList.remove('open');selectedPay=null;}
+function showPayStep(step){['select','upi','card','cod','done'].forEach(function(s){document.getElementById('pay-step-'+s).style.display=(s===step)?'':'none';});}
+function selectPay(method){selectedPay=method;showPayStep(method);}
+function backToPay(){showPayStep('select');}
+
+async function confirmBooking(method) {
+  var qty=parseInt(document.getElementById('b-qty').value);
+  var date=document.getElementById('b-date').value;
+  try {
+    await authFetch('/bookings/',{method:'POST',body:JSON.stringify({consumer_id:parseInt(consumerData.consumer_id),agency_id:parseInt(consumerData.agency_id),cylinders_requested:qty,booking_date:date})});
+    showPayStep('done');
+    toast('Booking confirmed!','success');
+  } catch(e){toast(e.message,'error');closePayment();}
+}
+document.getElementById('payment-modal').addEventListener('click',function(e){if(e.target===this)closePayment();});
+
+// ── Support Portal Logic ──────────────────────────────────────────
+var supportBookingsCache = [];
+
+async function loadSupportTab() {
+  try {
+    // 1. Fetch consumer bookings to link
+    var bdata = await authFetch('/bookings/?consumer_id=' + consumerData.consumer_id + '&page_size=100');
+    supportBookingsCache = bdata.results || bdata || [];
+    
+    // Populate booking dropdown
+    var select = document.getElementById('s-booking-id');
+    var bookingOptions = '<option value="">-- No linked booking --</option>';
+    supportBookingsCache.forEach(function(b) {
+      var dateStr = b.booking_date ? b.booking_date.split('T')[0] : '--';
+      var statusBadge = b.status.toUpperCase();
+      bookingOptions += '<option value="' + b.booking_id + '">Booking #' + b.booking_id + ' (' + b.cylinders_requested + ' Cyl, ' + dateStr + ', ' + statusBadge + ')</option>';
+    });
+    select.innerHTML = bookingOptions;
+
+    // 2. Fetch and render tickets list
+    loadSupportTickets();
+
+  } catch(e) {
+    toast('Error loading support dashboard: ' + e.message, 'error');
+  }
+}
+
+async function loadSupportTickets() {
+  var tbody = document.getElementById('support-tickets-body');
+  tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center"><span class="spinner"></span> Loading tickets...</td></tr>';
+  try {
+    var tickets = await authFetch('/support/tickets');
+    if (!tickets || tickets.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3)">No tickets submitted yet.</td></tr>';
+      return;
+    }
+    
+    var html = '';
+    tickets.forEach(function(t) {
+      var dateStr = t.created_at ? t.created_at.split('T')[0] : '--';
+      var timeStr = t.created_at ? t.created_at.split('T')[1].substring(0, 5) : '';
+      var formattedDate = dateStr + ' ' + timeStr;
+      var catLabel = formatCategoryLabel(t.category);
+      
+      var priorityBadge = 'p-badge-' + t.priority;
+      var statusBadge = 'p-badge-' + t.status;
+      var linkedBookingStr = t.booking_id ? '#' + t.booking_id : 'None';
+      
+      html += '<tr class="ticket-row-main" onclick="toggleTicketDetail(' + t.ticket_id + ')">' +
+                '<td><strong>' + t.ticket_number + '</strong></td>' +
+                '<td>' + formattedDate + '</td>' +
+                '<td>' + catLabel + '</td>' +
+                '<td>' + escapeHTML(t.subject) + '</td>' +
+                '<td><span class="p-badge ' + priorityBadge + '">' + t.priority + '</span></td>' +
+                '<td><span class="p-badge ' + statusBadge + '">' + t.status.replace('_', ' ') + '</span></td>' +
+              '</tr>' +
+              '<tr class="ticket-detail-row" id="ticket-detail-' + t.ticket_id + '">' +
+                '<td colspan="6" class="ticket-detail-content">' +
+                  '<div class="ticket-detail-grid">' +
+                    '<div class="ticket-detail-item"><label>Linked Booking</label><span>' + linkedBookingStr + '</span></div>' +
+                    '<div class="ticket-detail-item"><label>Priority</label><span>' + t.priority.toUpperCase() + '</span></div>' +
+                    '<div class="ticket-detail-item"><label>Ticket ID</label><span>' + t.ticket_number + '</span></div>' +
+                  '</div>' +
+                  '<div style="margin-top:10px;"><label style="font-size:10px;color:var(--text3);text-transform:uppercase;font-family:\'DM Mono\',monospace;display:block;">Description</label>' +
+                  '<span style="white-space:pre-wrap;">' + escapeHTML(t.description) + '</span></div>' +
+                '</td>' +
+              '</tr>';
+    });
+    tbody.innerHTML = html;
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#f87171">Failed to load support tickets.</td></tr>';
+  }
+}
+
+function selectSupportCategory(category, element) {
+  // Toggle active class on tiles
+  document.querySelectorAll('.support-tile').forEach(function(tile) {
+    tile.classList.remove('active');
+  });
+  element.classList.add('active');
+  
+  // Set hidden backing category value
+  document.getElementById('s-category').value = category;
+  
+  // Auto-fill template subject & default priority
+  var subjectInput = document.getElementById('s-subject');
+  var prioritySelect = document.getElementById('s-priority');
+  
+  var templates = {
+    'delivery_not_received': 'Delivery not received for booking',
+    'damaged_cylinder': 'Urgent: Safety risk - Damaged cylinder received',
+    'booking_issue': 'Issue regarding cylinder booking',
+    'billing': 'Billing dispute or refund enquiry',
+    'delayed_delivery': 'Refill cylinder delivery delayed',
+    'other': ''
+  };
+  
+  var priorities = {
+    'delivery_not_received': 'medium',
+    'damaged_cylinder': 'high',
+    'booking_issue': 'low',
+    'billing': 'medium',
+    'delayed_delivery': 'medium',
+    'other': 'low'
+  };
+  
+  subjectInput.value = templates[category] || '';
+  prioritySelect.value = priorities[category] || 'low';
+  
+  // Smart Booking Linkage:
+  if (supportBookingsCache.length > 0) {
+    var targetBooking = null;
+    if (category === 'booking_issue' || category === 'billing') {
+      targetBooking = supportBookingsCache.find(function(b) { return b.status === 'cancelled'; });
+    } else if (category === 'delayed_delivery' || category === 'delivery_not_received') {
+      targetBooking = supportBookingsCache.find(function(b) { return b.status === 'pending' || b.status === 'allocated'; });
+    }
+    
+    if (targetBooking) {
+      document.getElementById('s-booking-id').value = targetBooking.booking_id;
+      subjectInput.value = templates[category] + ' #' + targetBooking.booking_id;
+    } else {
+      document.getElementById('s-booking-id').value = '';
+    }
+  }
+
+  onPriorityOrCategoryChange();
+}
+
+function onPriorityOrCategoryChange() {
+  var category = document.getElementById('s-category').value;
+  var priority = document.getElementById('s-priority').value;
+  var advisory = document.getElementById('support-safety-advisory');
+  
+  if (category === 'damaged_cylinder' || priority === 'high') {
+    advisory.classList.remove('hidden');
+  } else {
+    advisory.classList.add('hidden');
+  }
+}
+
+async function submitSupportTicket() {
+  var category = document.getElementById('s-category').value;
+  var bookingId = document.getElementById('s-booking-id').value;
+  var priority = document.getElementById('s-priority').value;
+  var subject = document.getElementById('s-subject').value.trim();
+  var description = document.getElementById('s-description').value.trim();
+  var submitBtn = document.getElementById('support-submit-btn');
+  
+  if (!subject || !description) {
+    toast('Please fill out all required fields', 'error');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  var originalText = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<span class="spinner"></span> Submitting ticket...';
+  
+  var payload = {
+    category: category,
+    booking_id: bookingId ? parseInt(bookingId) : null,
+    subject: subject,
+    description: description,
+    priority: priority
+  };
+  
+  try {
+    var res = await authFetch('/support/tickets', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    toast('Ticket ' + res.ticket_number + ' submitted successfully!', 'success');
+    
+    // Reset Form
+    document.getElementById('support-form').reset();
+    document.getElementById('s-category').value = 'other';
+    document.querySelectorAll('.support-tile').forEach(function(tile) {
+      tile.classList.remove('active');
+    });
+    document.getElementById('support-safety-advisory').classList.add('hidden');
+    
+    // Reload tickets
+    loadSupportTickets();
+  } catch(e) {
+    toast(e.message || 'Failed to submit support ticket', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+  }
+}
+
+function toggleFAQ(element) {
+  element.classList.toggle('active');
+}
+
+function toggleTicketDetail(ticketId) {
+  var row = document.getElementById('ticket-detail-' + ticketId);
+  if (row) {
+    row.classList.toggle('open');
+  }
+}
+
+function formatCategoryLabel(cat) {
+  var labels = {
+    'delivery_not_received': 'Delivery Missing',
+    'damaged_cylinder': 'Damaged Cylinder',
+    'booking_issue': 'Booking Issue',
+    'billing': 'Billing / Refund',
+    'delayed_delivery': 'Delayed Delivery',
+    'other': 'Other Query'
+  };
+  return labels[cat] || cat;
+}
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg,type){
+  type=type||'success';
+  var el=document.createElement('div');
+  el.className='toast '+type;
+  el.textContent=msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(function(){el.classList.add('show');},10);
+  setTimeout(function(){el.classList.remove('show');setTimeout(function(){el.remove();},300);},3500);
+}
+
+// ── Booking Detail & Chat & Instructions ──
+var currentDetailBookingId = null;
+var consumerChatPollInterval = null;
+
+async function openBookingDetail(bookingId) {
+  currentDetailBookingId = bookingId;
+  document.getElementById('detail-modal-title').textContent = 'Tracking Booking #' + bookingId;
+  document.getElementById('detail-modal-body').innerHTML = '<span class="spinner"></span> Loading tracking details...';
+  document.getElementById('booking-detail-modal').classList.add('open');
+  
+  try {
+    var b = await authFetch('/consumer/bookings/' + bookingId + '/delivery');
+    
+    var agentInfo = '<p style="color:var(--text3);font-size:13px">Agent assignment pending.</p>';
+    var chatBtn = '';
+    
+    if (b.agent_id) {
+      agentInfo = '<div style="display:flex;flex-direction:column;gap:4px">' +
+        '<div><strong>Name:</strong> ' + b.agent_name + '</div>' +
+        '<div><strong>Phone:</strong> <a href="tel:' + b.agent_phone + '" style="color:var(--accent)">' + b.agent_phone + '</a></div>' +
+        '</div>';
+      chatBtn = '<button class="btn btn-primary" style="width:auto;margin-top:10px" onclick="openConsumerChat(' + bookingId + ', \'' + b.agent_name + '\')"><i class="ti ti-message-2"></i> Chat with Agent</button>';
+    }
+
+    var delStatus = b.delivery_status || b.status || 'allocated';
+    var statusLabel = delStatus.replace(/_/g, ' ');
+    var instructions = b.delivery_instructions || '';
+
+    var content = 
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">' +
+        '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase">Cylinders</label><span style="font-size:14px;font-weight:600">' + b.cylinders_requested + '</span></div>' +
+        '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase">Delivery Status</label><span class="p-badge p-badge-' + b.status + '" style="margin-top:2px">' + statusLabel + '</span></div>' +
+      '</div>' +
+      '<div class="p-card" style="margin-bottom:14px">' +
+        '<div class="p-card-header"><i class="ti ti-truck" style="color:var(--accent)"></i><span class="p-card-title">Delivery Agent Details</span></div>' +
+        '<div class="p-card-body">' + agentInfo + chatBtn + '</div>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>Delivery Instructions / Directions</label>' +
+        '<input type="text" id="instructions-input" placeholder="e.g. Leave with gate keeper, or phone number to call..." value="' + escapeHTML(instructions) + '">' +
+        '<button class="btn btn-outline" style="width:auto;margin-top:8px" onclick="saveInstructions(' + bookingId + ')"><i class="ti ti-device-floppy"></i> Save Instructions</button>' +
+      '</div>' +
+      '<div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:12.5px;color:var(--text3)">Have a delivery complaint?</span>' +
+        '<button class="btn btn-danger btn-sm" onclick="fileComplaintDirect(' + bookingId + ')"><i class="ti ti-alert-circle"></i> File Complaint</button>' +
+      '</div>';
+      
+    document.getElementById('detail-modal-body').innerHTML = content;
+  } catch(e) {
+    document.getElementById('detail-modal-body').innerHTML = '<p style="color:#f87171">Failed to load booking details: ' + e.message + '</p>';
+  }
+}
+
+function closeBookingDetail() {
+  document.getElementById('booking-detail-modal').classList.remove('open');
+  currentDetailBookingId = null;
+}
+
+async function saveInstructions(bookingId) {
+  var txt = document.getElementById('instructions-input').value.trim();
+  try {
+    await authFetch('/consumer/bookings/' + bookingId + '/instructions', {
+      method: 'PATCH',
+      body: JSON.stringify({ delivery_instructions: txt })
+    });
+    toast('Delivery instructions saved successfully', 'success');
+  } catch(e) {
+    toast('Error saving instructions: ' + e.message, 'error');
+  }
+}
+
+function fileComplaintDirect(bookingId) {
+  closeBookingDetail();
+  showSection('support');
+  selectSupportCategory('delivery_not_received', document.querySelector('.support-tile'));
+  document.getElementById('s-booking-id').value = bookingId;
+  document.getElementById('s-subject').value = 'Delivery complaint for booking #' + bookingId;
+  document.getElementById('s-description').focus();
+  toast('Complaint form loaded. Please describe your issue.', 'info');
+}
+
+// ── Consumer Chat ──
+var activeChatBookingId = null;
+
+function openConsumerChat(bookingId, agentName) {
+  activeChatBookingId = bookingId;
+  document.getElementById('consumer-chat-title').textContent = 'Chat with Agent: ' + agentName;
+  document.getElementById('consumer-chat-modal').classList.add('open');
+  loadConsumerChatMessages();
+  consumerChatPollInterval = setInterval(loadConsumerChatMessages, 4000);
+}
+
+function closeConsumerChat() {
+  document.getElementById('consumer-chat-modal').classList.remove('open');
+  activeChatBookingId = null;
+  if (consumerChatPollInterval) {
+    clearInterval(consumerChatPollInterval);
+    consumerChatPollInterval = null;
+  }
+}
+
+async function loadConsumerChatMessages() {
+  if (!activeChatBookingId) return;
+  try {
+    var history = await authFetch('/bookings/' + activeChatBookingId + '/chat');
+    var list = document.getElementById('consumer-chat-messages');
+    var isScrolledToBottom = list.scrollHeight - list.clientHeight <= list.scrollTop + 30;
+
+    list.innerHTML = history.length ? history.map(function(m) {
+      var time = new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      var cls = m.sender_type === 'consumer' ? 'sent' : 'received';
+      return '<div class="chat-msg ' + cls + '">' +
+        '<span class="chat-msg-sender">' + m.sender_name + '</span>' +
+        '<span>' + m.message + '</span>' +
+        '<span class="chat-msg-time">' + time + '</span>' +
+      '</div>';
+    }).join('') : '<div class="empty-state" style="font-size:12px;padding:20px">No messages yet. Send a message to start conversation.</div>';
+
+    if (isScrolledToBottom || history.length === 1) {
+      list.scrollTop = list.scrollHeight;
+    }
+  } catch(e) {
+    console.error('Consumer chat error: ' + e.message);
+  }
+}
+
+async function sendConsumerChatMessage() {
+  var input = document.getElementById('consumer-chat-input-text');
+  var txt = input.value.trim();
+  if (!txt || !activeChatBookingId) return;
+  try {
+    await authFetch('/bookings/' + activeChatBookingId + '/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: txt })
+    });
+    input.value = '';
+    loadConsumerChatMessages();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ── KYC Dashboard & Submission ──
+function loadKYCDashboard() {
+  var container = document.getElementById('kyc-status-container');
+  var form = document.getElementById('kyc-form');
+  var status = consumerData.kyc_status || 'unverified';
+  
+  var statusHTML = '';
+  if (status === 'verified') {
+    statusHTML = '<h3 style="color:#34d399; display:flex; align-items:center; gap:6px;"><i class="ti ti-circle-check"></i> Account Verified</h3>' +
+                 '<p style="margin-top:6px; font-size:13px; color:var(--text2);">Your KYC profile has been approved. Standard cylinder booking permissions are fully unlocked.</p>' +
+                 '<div style="margin-top:10px; font-size:12px; color:var(--text3);"><strong>Document Type:</strong> ' + (consumerData.kyc_doc_type || '—') + ' &bull; <strong>No:</strong> ' + (consumerData.kyc_doc_num || '—') + '</div>';
+    form.style.display = 'none';
+  } else if (status === 'pending') {
+    statusHTML = '<h3 style="color:#fbbf24; display:flex; align-items:center; gap:6px;"><i class="ti ti-clock"></i> Verification Pending</h3>' +
+                 '<p style="margin-top:6px; font-size:13px; color:var(--text2);">Your documents are currently undergoing administrative verification review. Booking services will unlock shortly.</p>' +
+                 '<div style="margin-top:10px; font-size:12px; color:var(--text3);"><strong>Document Type:</strong> ' + (consumerData.kyc_doc_type || '—') + ' &bull; <strong>No:</strong> ' + (consumerData.kyc_doc_num || '—') + '</div>';
+    form.style.display = 'none';
+  } else if (status === 'rejected') {
+    statusHTML = '<h3 style="color:#f87171; display:flex; align-items:center; gap:6px;"><i class="ti ti-circle-x"></i> Submission Rejected</h3>' +
+                 '<p style="margin-top:6px; font-size:13px; color:var(--text2);">Your KYC document verification request was rejected. Please review your details and submit a new document.</p>';
+    form.style.display = 'block';
+  } else {
+    statusHTML = '<h3 style="color:#fbbf24; display:flex; align-items:center; gap:6px;"><i class="ti ti-shield-alert"></i> Verification Required</h3>' +
+                 '<p style="margin-top:6px; font-size:13px; color:var(--text2);">You must submit a valid identification document (Aadhaar, Passport, or PAN) to book cylinders.</p>';
+    form.style.display = 'block';
+  }
+  container.innerHTML = statusHTML;
+}
+
+async function submitKYC() {
+  var docType = document.getElementById('kyc-doc-type').value;
+  var docNum = document.getElementById('kyc-doc-num').value.trim();
+  var submitBtn = document.getElementById('kyc-submit-btn');
+  
+  if (!docNum) {
+    toast('Please enter a valid document identification number.', 'error');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  var originalHtml = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<span class="spinner"></span> Verifying...';
+  
+  try {
+    var updatedConsumer = await authFetch('/consumers/kyc/submit', {
+      method: 'POST',
+      body: JSON.stringify({ doc_type: docType, doc_num: docNum })
+    });
+    
+    consumerData = updatedConsumer;
+    localStorage.setItem('lpg_consumer', JSON.stringify(updatedConsumer));
+    toast('KYC documents submitted and verified successfully!', 'success');
+    loadKYCDashboard();
+    loadHome();
+  } catch(e) {
+    toast(e.message || 'Submission failed.', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalHtml;
+  }
+}
+
+// ── Invoices Tab Logic ──
+let consumerInvoices = [];
+
+async function loadMyInvoices() {
+  var tbody = document.getElementById('my-invoices-body');
+  tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center"><span class="spinner"></span> Loading invoices...</td></tr>';
+  
+  try {
+    var data = await authFetch('/invoices/my');
+    consumerInvoices = data || [];
+    
+    if (consumerInvoices.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--text3)">No invoices generated yet.</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = consumerInvoices.map(function(inv) {
+      var issuedDate = inv.issued_at ? inv.issued_at.split('T')[0] : '--';
+      
+      let statusClass = 'pending';
+      if (inv.payment_status === 'paid') statusClass = 'delivered';
+      if (inv.payment_status === 'refunded') statusClass = 'cancelled';
+      
+      return '<tr>' +
+             '  <td><strong>' + inv.invoice_number + '</strong></td>' +
+             '  <td>' + issuedDate + '</td>' +
+             '  <td>₹' + parseFloat(inv.amount).toFixed(2) + '</td>' +
+             '  <td>₹' + parseFloat(inv.cgst).toFixed(2) + '</td>' +
+             '  <td>₹' + parseFloat(inv.sgst).toFixed(2) + '</td>' +
+             '  <td>₹' + parseFloat(inv.delivery_fee).toFixed(2) + '</td>' +
+             '  <td><strong>₹' + parseFloat(inv.total_amount).toFixed(2) + '</strong></td>' +
+             '  <td><span class="p-badge p-badge-' + statusClass + '">' + inv.payment_status.toUpperCase() + '</span></td>' +
+             '  <td><button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:11.5px;width:auto;" onclick="viewInvoiceLocal(' + inv.invoice_id + ')"><i class="ti ti-eye"></i> View</button></td>' +
+             '</tr>';
+    }).join('');
+    
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#f87171">Failed to load invoices.</td></tr>';
+  }
+}
+
+function viewInvoiceLocal(invoiceId) {
+  var inv = consumerInvoices.find(function(i) { return i.invoice_id === invoiceId; });
+  if (!inv) return;
+  
+  var content = document.getElementById('consumer-invoice-content');
+  var qty = Math.round(parseFloat(inv.amount) / 850);
+  
+  content.innerHTML = 
+    '<div style="text-align:center; border-bottom:1.5px solid var(--border); padding-bottom:10px; margin-bottom:12px;">' +
+    '  <h3 style="color:#14b8a6; text-transform:uppercase; font-size:16px;">Tax Invoice</h3>' +
+    '  <span style="color:var(--text3); font-size:11px;">LPG GAS DISTRIBUTION BILL</span>' +
+    '</div>' +
+    '<div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:11.5px; color:var(--text2);">' +
+    '  <div>' +
+    '    <strong>Invoice No:</strong> ' + inv.invoice_number + '<br>' +
+    '    <strong>Booking Ref:</strong> BK-' + inv.booking_id + '<br>' +
+    '    <strong>Date:</strong> ' + new Date(inv.issued_at).toLocaleString() + '' +
+    '  </div>' +
+    '  <div style="text-align:right;">' +
+    '    <strong>Customer:</strong> ' + (inv.consumer_name || 'Client') + '<br>' +
+    '    <strong>Distributor:</strong> ' + (inv.agency_name || 'Agency') + '<br>' +
+    '    <strong>Method:</strong> ' + inv.payment_method + '' +
+    '  </div>' +
+    '</div>' +
+    '<table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:11.5px;">' +
+    '  <thead>' +
+    '    <tr style="border-bottom:1px solid var(--border);">' +
+    '      <th style="text-align:left; padding:4px 0; color:var(--text3);">Item Description</th>' +
+    '      <th style="text-align:center; padding:4px 0; color:var(--text3);">Qty</th>' +
+    '      <th style="text-align:right; padding:4px 0; color:var(--text3);">Amount</th>' +
+    '    </tr>' +
+    '  </thead>' +
+    '  <tbody>' +
+    '    <tr>' +
+    '      <td style="padding:6px 0;">LPG Cylinder Refill</td>' +
+    '      <td style="text-align:center; padding:6px 0;">' + qty + '</td>' +
+    '      <td style="text-align:right; padding:6px 0;">₹' + parseFloat(inv.amount).toFixed(2) + '</td>' +
+    '    </tr>' +
+    '    <tr>' +
+    '      <td style="padding:4px 0; color:var(--text2);">Central GST (CGST @ 9%)</td>' +
+    '      <td style="text-align:center; padding:4px 0;">—</td>' +
+    '      <td style="text-align:right; padding:4px 0; color:var(--text2);">₹' + parseFloat(inv.cgst).toFixed(2) + '</td>' +
+    '    </tr>' +
+    '    <tr>' +
+    '      <td style="padding:4px 0; color:var(--text2);">State GST (SGST @ 9%)</td>' +
+    '      <td style="text-align:center; padding:4px 0;">—</td>' +
+    '      <td style="text-align:right; padding:4px 0; color:var(--text2);">₹' + parseFloat(inv.sgst).toFixed(2) + '</td>' +
+    '    </tr>' +
+    '    <tr style="border-bottom:1px solid var(--border);">' +
+    '      <td style="padding:6px 0 6px 0;">Delivery &amp; Handling Charge</td>' +
+    '      <td style="text-align:center; padding:6px 0 6px 0;">1</td>' +
+    '      <td style="text-align:right; padding:6px 0 6px 0;">₹' + parseFloat(inv.delivery_fee).toFixed(2) + '</td>' +
+    '    </tr>' +
+    '  </tbody>' +
+    '</table>' +
+    '<div style="text-align:right; font-size:14px; font-weight:bold; color:var(--text); padding-top:4px;">' +
+    '  Grand Total Paid: ₹' + parseFloat(inv.total_amount).toFixed(2) + '' +
+    '</div>' +
+    '<div style="text-align:center; margin-top:15px; font-size:10px; color:var(--text3);">' +
+    '  * Computer generated tax invoice record. *' +
+    '</div>';
+    
+  document.getElementById('consumer-invoice-modal').classList.add('open');
+}
+
+function closeInvoiceModal() {
+  document.getElementById('consumer-invoice-modal').classList.remove('open');
+}
+
+function printInvoiceLocal() {
+  window.print();
+}
+</script>
+
+  <!-- INVOICES -->
+  <div id="sec-invoices" style="display:none">
+    <div class="p-card">
+      <div class="p-card-header"><i class="ti ti-receipt" style="color:#5eead4;font-size:16px"></i><span class="p-card-title">My Tax Invoices</span></div>
+      <div style="overflow-x:auto">
+        <table class="p-table">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Date Issued</th>
+              <th>Base Rate</th>
+              <th>CGST (9%)</th>
+              <th>SGST (9%)</th>
+              <th>Delivery Fee</th>
+              <th>Total Paid</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="my-invoices-body">
+            <tr><td colspan="9" style="padding:20px;text-align:center;color:var(--text3)">Loading invoices...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- KYC -->
+  <div id="sec-kyc" style="display:none">
+    <div class="p-card" style="max-width: 500px; margin: 0 auto;">
+      <div class="p-card-header"><i class="ti ti-shield-check" style="color:#5eead4;font-size:16px"></i><span class="p-card-title">KYC Document Verification</span></div>
+      <div class="p-card-body">
+        <div id="kyc-status-container" style="margin-bottom: 20px; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.02)">
+          <!-- Status message loaded via JS -->
+        </div>
+        <form id="kyc-form" onsubmit="event.preventDefault(); submitKYC();">
+          <div class="form-group">
+            <label>Select Document Type</label>
+            <select id="kyc-doc-type" required>
+              <option value="Aadhaar Card">Aadhaar Card (12 Digits)</option>
+              <option value="PAN Card">PAN Card (10 Digits)</option>
+              <option value="Passport">Passport Number (8-9 Digits)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Document Identification Number</label>
+            <input type="text" id="kyc-doc-num" placeholder="Enter identification number..." required>
+          </div>
+          <button class="btn btn-primary" type="submit" id="kyc-submit-btn"><i class="ti ti-upload"></i> Submit Documents</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONSUMER INVOICE DETAIL MODAL -->
+  <div class="modal-overlay" id="consumer-invoice-modal">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <span style="font-weight:600">Tax Invoice Receipt</span>
+        <button onclick="closeInvoiceModal()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="consumer-invoice-content" style="background:#0f172a; color:#e2e8f0; font-family:monospace; padding:15px; border:1px dashed #334155; border-radius:6px; font-size:12px; line-height: 1.4;">
+          <!-- Filled dynamically -->
+        </div>
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="btn btn-outline btn-sm" onclick="closeInvoiceModal()">Close</button>
+          <button class="btn btn-primary btn-sm" style="background:#14b8a6; color:#fff;" onclick="printInvoiceLocal()"><i class="ti ti-printer"></i> Print</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- TRACKING MODAL -->
+<div class="modal-overlay" id="booking-detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-weight:600" id="detail-modal-title">Booking Details</span>
+      <button onclick="closeBookingDetail()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="detail-modal-body">
+      <!-- Loaded dynamically -->
+    </div>
+  </div>
+</div>
+
+<!-- CONSUMER CHAT MODAL -->
+<div class="modal-overlay" id="consumer-chat-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-weight:600" id="consumer-chat-title">Chat with Delivery Agent</span>
+      <button onclick="closeConsumerChat()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="chat-messages" id="consumer-chat-messages">
+        <!-- Messages loaded dynamically -->
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="chat-input" id="consumer-chat-input-text" placeholder="Type a message to agent..." onkeydown="if(event.key==='Enter') sendConsumerChatMessage()">
+        <button class="btn btn-primary" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 18px rgba(20,184,166,0.25)" onclick="sendConsumerChatMessage()"><i class="ti ti-send"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algorithm Playground — LPG System</title>
+<meta name="description" content="Test and compare FCFS vs Smart Priority allocation algorithms with custom data before deploying to production.">
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════════════════════════════
+     ALGORITHM PLAYGROUND — Premium Dedicated Styles
+     ═══════════════════════════════════════════════════════════════════ */
+
+  .pg-body { font-family: 'Inter', 'Segoe UI', sans-serif; }
+
+  /* ── Hero Header ───────────────────────────────────────────────── */
+  .pg-hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1a1a2e 100%);
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 32px 36px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .pg-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .pg-hero-title {
+    font-size: 26px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #f97316, #fb923c, #fbbf24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 6px;
+  }
+  .pg-hero-sub {
+    font-size: 14px;
+    color: #94a3b8;
+    line-height: 1.5;
+    max-width: 680px;
+  }
+  .pg-hero-badges {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .pg-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pg-hero-badge.safe {
+    background: rgba(34,197,94,0.12);
+    color: #4ade80;
+    border: 1px solid rgba(34,197,94,0.25);
+  }
+  .pg-hero-badge.sandbox {
+    background: rgba(249,115,22,0.12);
+    color: #fb923c;
+    border: 1px solid rgba(249,115,22,0.25);
+  }
+  .pg-hero-badge.lab {
+    background: rgba(99,102,241,0.12);
+    color: #a5b4fc;
+    border: 1px solid rgba(99,102,241,0.25);
+  }
+
+  /* ── Configuration Panel ───────────────────────────────────────── */
+  .pg-config {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .pg-config-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pg-config-title i { color: #6366f1; font-size: 18px; }
+  .pg-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .pg-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .pg-field input,
+  .pg-field select {
+    width: 100%;
+    padding: 10px 14px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #f1f5f9;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .pg-field input:focus,
+  .pg-field select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
+  }
+  .pg-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 42px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    color: #cbd5e1;
+  }
+  .pg-toggle-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #f97316;
+    cursor: pointer;
+  }
+
+  /* ── Algorithm selector ────────────────────────────────────────── */
+  .pg-algo-selector {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .pg-algo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .pg-algo-card {
+    position: relative;
+    background: #0f172a;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .pg-algo-card:hover {
+    border-color: #475569;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .pg-algo-card.selected {
+    border-color: #6366f1;
+    background: rgba(99,102,241,0.06);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+  }
+  .pg-algo-card .algo-check {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .pg-algo-card.selected .algo-check {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: white;
+  }
+  .pg-algo-card .algo-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  .pg-algo-card .algo-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #f1f5f9;
+    margin-bottom: 4px;
+  }
+  .pg-algo-card .algo-desc {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+  .pg-algo-card .algo-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .pg-algo-card .algo-tag {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .algo-tag-gray { background: rgba(100,116,139,0.2); color: #94a3b8; }
+  .algo-tag-orange { background: rgba(249,115,22,0.15); color: #fb923c; }
+  .algo-tag-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .algo-tag-blue { background: rgba(56,189,248,0.15); color: #38bdf8; }
+  .algo-tag-red { background: rgba(239,68,68,0.15); color: #f87171; }
+
+  /* ── Preset Scenarios ──────────────────────────────────────────── */
+  .pg-presets {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .pg-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .pg-preset-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+  }
+  .pg-preset-btn:hover {
+    border-color: #6366f1;
+    background: rgba(99,102,241,0.06);
+    transform: translateY(-1px);
+  }
+  .pg-preset-btn .preset-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .pg-preset-btn .preset-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e2e8f0;
+  }
+  .pg-preset-btn .preset-desc {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  /* ── Data Entry Table ──────────────────────────────────────────── */
+  .pg-data-panel {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .pg-data-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .pg-data-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pg-data-title i { color: #fb923c; font-size: 18px; }
+  .pg-data-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pg-data-summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+  .pg-data-summary .summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .pg-data-summary .chip-total { background: rgba(226,232,240,0.1); color: #e2e8f0; }
+  .pg-data-summary .chip-dom { background: rgba(34,197,94,0.1); color: #4ade80; }
+  .pg-data-summary .chip-ess { background: rgba(56,189,248,0.1); color: #38bdf8; }
+  .pg-data-summary .chip-com { background: rgba(249,115,22,0.1); color: #fb923c; }
+  .pg-data-summary .chip-gap { background: rgba(239,68,68,0.1); color: #f87171; }
+
+  .pg-table-wrap {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #334155;
+    border-radius: 8px;
+  }
+  .pg-table {
+    width: 100%;
+    min-width: 960px;
+    border-collapse: collapse;
+  }
+  .pg-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  .pg-table th {
+    padding: 10px 12px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #94a3b8;
+    background: #0f172a;
+    border-bottom: 2px solid #334155;
+    text-align: left;
+  }
+  .pg-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(51,65,85,0.5);
+    vertical-align: middle;
+  }
+  .pg-table tbody tr:hover { background: rgba(99,102,241,0.04); }
+  .pg-table input,
+  .pg-table select {
+    width: 100%;
+    padding: 7px 10px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #f1f5f9;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .pg-table input:focus,
+  .pg-table select:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+  .pg-row-num {
+    color: #475569;
+    font-weight: 800;
+    font-size: 12px;
+    text-align: center;
+    width: 40px;
+  }
+  .pg-del-btn {
+    background: none;
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 6px;
+    color: #f87171;
+    padding: 5px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pg-del-btn:hover {
+    background: rgba(239,68,68,0.15);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  /* ── Run Bar ───────────────────────────────────────────────────── */
+  .pg-run-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 18px 28px;
+    margin-bottom: 28px;
+  }
+  .pg-run-btn {
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 20px rgba(249,115,22,0.3);
+  }
+  .pg-run-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(249,115,22,0.45);
+  }
+  .pg-run-btn:active {
+    transform: translateY(0px);
+  }
+  .pg-run-btn.running {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  .pg-run-info {
+    font-size: 13px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Results ───────────────────────────────────────────────────── */
+  .pg-results {
+    display: none;
+    animation: pgFadeIn 0.5s ease;
+  }
+  @keyframes pgFadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Verdict Banner */
+  .pg-verdict {
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    position: relative;
+    overflow: hidden;
+  }
+  .pg-verdict::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    border-radius: 14px 0 0 14px;
+  }
+  .pg-verdict.win::after { background: #22c55e; }
+  .pg-verdict.tie::after { background: #94a3b8; }
+  .pg-verdict.lose::after { background: #f59e0b; }
+  .pg-verdict-title {
+    font-size: 18px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .pg-verdict-text {
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.55;
+  }
+
+  /* KPI Cards */
+  .pg-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .pg-kpi {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .pg-kpi:hover { transform: translateY(-3px); }
+  .pg-kpi-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+  }
+  .pg-kpi-value {
+    font-size: 26px;
+    font-weight: 900;
+    color: #f8fafc;
+    line-height: 1;
+  }
+  .pg-kpi-sub {
+    font-size: 11px;
+    color: #475569;
+    margin-top: 6px;
+  }
+  .pg-kpi-value.green { color: #4ade80; }
+  .pg-kpi-value.orange { color: #fb923c; }
+  .pg-kpi-value.red { color: #f87171; }
+  .pg-kpi-value.blue { color: #60a5fa; }
+
+  /* Side-by-side columns */
+  .pg-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) {
+    .pg-compare { grid-template-columns: 1fr; }
+    .pg-algo-grid { grid-template-columns: 1fr; }
+  }
+  .pg-col {
+    background: #1e293b;
+    border-radius: 14px;
+    padding: 20px 22px;
+    border: 1px solid #334155;
+  }
+  .pg-col.smart-col {
+    border-color: #f97316;
+    box-shadow: 0 0 20px rgba(249,115,22,0.08);
+  }
+  .pg-col-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #334155;
+    margin-bottom: 16px;
+  }
+  .pg-col.smart-col .pg-col-header { border-bottom-color: rgba(249,115,22,0.3); }
+  .pg-col-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pg-col-name {
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .pg-col-mini-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .pg-col-stat {
+    background: #0f172a;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  .pg-col-stat-val {
+    font-size: 20px;
+    font-weight: 900;
+    color: #f8fafc;
+  }
+  .pg-col-stat-lbl {
+    font-size: 9px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-top: 3px;
+  }
+
+  .pg-result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .pg-result-table th {
+    padding: 8px 10px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    text-align: left;
+  }
+  .pg-result-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(51,65,85,0.4);
+    vertical-align: middle;
+  }
+  .pg-result-table tbody tr:hover { background: rgba(99,102,241,0.04); }
+  .pg-alloc-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .pg-alloc-badge.success { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .pg-alloc-badge.partial { background: rgba(249,115,22,0.15); color: #fb923c; }
+  .pg-alloc-badge.skipped { background: rgba(239,68,68,0.15); color: #f87171; }
+
+  /* ── Queue order viz ───────────────────────────────────────────── */
+  .pg-queue-viz {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .pg-queue-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pg-queue-title i { color: #a5b4fc; font-size: 18px; }
+  .pg-queue-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .pg-queue-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    width: 80px;
+    flex-shrink: 0;
+  }
+  .pg-queue-items {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pg-queue-chip {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .pg-queue-chip.dom { background: rgba(34,197,94,0.12); color: #4ade80; border-color: rgba(34,197,94,0.2); }
+  .pg-queue-chip.ess { background: rgba(56,189,248,0.12); color: #38bdf8; border-color: rgba(56,189,248,0.2); }
+  .pg-queue-chip.com { background: rgba(249,115,22,0.12); color: #fb923c; border-color: rgba(249,115,22,0.2); }
+
+  /* ── Utility ───────────────────────────────────────────────────── */
+  .pg-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: #cbd5e1;
+    font-family: inherit;
+  }
+  .pg-btn:hover {
+    border-color: #6366f1;
+    color: #a5b4fc;
+    background: rgba(99,102,241,0.06);
+  }
+  .pg-btn.primary {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    border-color: #6366f1;
+    color: white;
+  }
+  .pg-btn.primary:hover {
+    box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+    transform: translateY(-1px);
+  }
+  .pg-btn.orange {
+    background: rgba(249,115,22,0.12);
+    border-color: rgba(249,115,22,0.3);
+    color: #fb923c;
+  }
+  .pg-btn.orange:hover {
+    background: rgba(249,115,22,0.2);
+    border-color: #f97316;
+  }
+  .pg-btn.danger {
+    background: rgba(239,68,68,0.08);
+    border-color: rgba(239,68,68,0.25);
+    color: #f87171;
+  }
+  .pg-btn.danger:hover {
+    background: rgba(239,68,68,0.15);
+    border-color: #ef4444;
+  }
+
+  .pg-divider {
+    border: none;
+    border-top: 1px dashed #334155;
+    margin: 28px 0;
+  }
+</style>
+</head>
+<body class="pg-body">
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <!-- ═══════════ HERO HEADER ═══════════ -->
+    <div class="pg-hero">
+      <h1 class="pg-hero-title"><i class="ti ti-flask" style="font-size:30px;"></i> Algorithm Playground</h1>
+      <p class="pg-hero-sub">
+        Build custom test scenarios, choose your algorithm, and compare allocation outcomes side-by-side.
+        No data is written to bookings, stock, or allocation history — this is a pure sandbox environment for testing algorithms before deploying.
+      </p>
+      <div class="pg-hero-badges">
+        <span class="pg-hero-badge safe"><i class="ti ti-shield-check"></i> No Production Writes</span>
+        <span class="pg-hero-badge sandbox"><i class="ti ti-flask"></i> Sandbox Mode</span>
+        <span class="pg-hero-badge lab"><i class="ti ti-cpu"></i> Algorithm Lab</span>
+      </div>
+    </div>
+
+    <!-- ═══════════ ALGORITHM SELECTOR ═══════════ -->
+    <div class="pg-algo-selector">
+      <div class="pg-config-title"><i class="ti ti-cpu"></i> Select Algorithms to Compare</div>
+      <p style="font-size:12px; color:#64748b; margin-bottom:4px;">Choose one or both algorithms. When both are selected, results are shown side-by-side.</p>
+      <div class="pg-algo-grid">
+        <!-- FCFS Card -->
+        <div class="pg-algo-card selected" id="algo-fcfs-card" onclick="toggleAlgo('fcfs')">
+          <div class="algo-check" id="algo-fcfs-check"><i class="ti ti-check" style="font-size:12px;"></i></div>
+          <div class="algo-icon" style="color:#64748b;"><i class="ti ti-list-numbers"></i></div>
+          <div class="algo-name">FCFS (First-Come First-Served)</div>
+          <div class="algo-desc">
+            Legacy chronological queue. Orders are processed strictly by booking date.
+            Uses All-or-Nothing allocation — if stock can't fill a full order, it's skipped entirely.
+          </div>
+          <div class="algo-tags">
+            <span class="algo-tag algo-tag-gray">Chronological</span>
+            <span class="algo-tag algo-tag-red">All-or-Nothing</span>
+            <span class="algo-tag algo-tag-gray">No Priority</span>
+          </div>
+        </div>
+        <!-- Smart Priority Card -->
+        <div class="pg-algo-card selected" id="algo-smart-card" onclick="toggleAlgo('smart')">
+          <div class="algo-check" id="algo-smart-check"><i class="ti ti-check" style="font-size:12px;"></i></div>
+          <div class="algo-icon" style="color:#f97316;"><i class="ti ti-bolt"></i></div>
+          <div class="algo-name">Smart Priority Engine</div>
+          <div class="algo-desc">
+            Tier-based priority queue with anti-starvation ageing. Domestic → Essential → Commercial.
+            Uses pro-rata splitting and dynamic priority scoring to maximise utilization.
+          </div>
+          <div class="algo-tags">
+            <span class="algo-tag algo-tag-orange">Priority Tiers</span>
+            <span class="algo-tag algo-tag-green">Pro-Rata Split</span>
+            <span class="algo-tag algo-tag-blue">Anti-Starvation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ CONFIGURATION ═══════════ -->
+    <div class="pg-config">
+      <div class="pg-config-title"><i class="ti ti-adjustments-horizontal"></i> Simulation Configuration</div>
+      <div class="pg-config-grid">
+        <div class="pg-field">
+          <label>Available Cylinder Stock</label>
+          <input type="number" id="pg-stock" value="12" min="0" placeholder="e.g. 12">
+        </div>
+        <div class="pg-field">
+          <label>Agency Context</label>
+          <select id="pg-agency">
+            <option value="">Standalone simulation (no agency)</option>
+          </select>
+        </div>
+        <div class="pg-field">
+          <label>Crisis Mode</label>
+          <label class="pg-toggle-label">
+            <input type="checkbox" id="pg-crisis"> Activate crisis rules
+          </label>
+        </div>
+        <div class="pg-field">
+          <label>Bulk Generate Count</label>
+          <input type="number" id="pg-bulk-count" value="10" min="1" max="100" placeholder="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ PRESET SCENARIOS ═══════════ -->
+    <div class="pg-presets">
+      <div class="pg-config-title"><i class="ti ti-template"></i> Quick-Load Preset Scenarios</div>
+      <div class="pg-preset-grid">
+        <button class="pg-preset-btn" onclick="loadPreset('demo')">
+          <div class="preset-icon" style="background:rgba(34,197,94,0.12); color:#4ade80;"><i class="ti ti-home"></i></div>
+          <div>
+            <div class="preset-label">5 vs 6 Demo</div>
+            <div class="preset-desc">5-cylinder domestic vs 6-cylinder commercial. Classic shortage scenario.</div>
+          </div>
+        </button>
+        <button class="pg-preset-btn" onclick="loadPreset('crisis')">
+          <div class="preset-icon" style="background:rgba(239,68,68,0.12); color:#f87171;"><i class="ti ti-alert-triangle"></i></div>
+          <div>
+            <div class="preset-label">Crisis Mode</div>
+            <div class="preset-desc">Mixed orders under crisis restrictions. Commercial freezes demonstrated.</div>
+          </div>
+        </button>
+        <button class="pg-preset-btn" onclick="loadPreset('starvation')">
+          <div class="preset-icon" style="background:rgba(249,115,22,0.12); color:#fb923c;"><i class="ti ti-clock-exclamation"></i></div>
+          <div>
+            <div class="preset-label">Anti-Starvation</div>
+            <div class="preset-desc">Long-waiting commercial orders that should escalate in priority via ageing.</div>
+          </div>
+        </button>
+        <button class="pg-preset-btn" onclick="loadPreset('heavy')">
+          <div class="preset-icon" style="background:rgba(99,102,241,0.12); color:#a5b4fc;"><i class="ti ti-database"></i></div>
+          <div>
+            <div class="preset-label">Heavy Load (25+)</div>
+            <div class="preset-desc">Stress test with 25 mixed-type orders across different dates and quantities.</div>
+          </div>
+        </button>
+        <button class="pg-preset-btn" onclick="loadPreset('mixed')">
+          <div class="preset-icon" style="background:rgba(56,189,248,0.12); color:#38bdf8;"><i class="ti ti-shuffle"></i></div>
+          <div>
+            <div class="preset-label">Random Mixed Load</div>
+            <div class="preset-desc">Auto-generates N rows (based on bulk count) with randomized data.</div>
+          </div>
+        </button>
+        <button class="pg-preset-btn" onclick="loadPreset('equal')">
+          <div class="preset-icon" style="background:rgba(251,191,36,0.12); color:#fbbf24;"><i class="ti ti-equal"></i></div>
+          <div>
+            <div class="preset-label">Equal Priority</div>
+            <div class="preset-desc">All domestic, same qty and date. Both algorithms should produce identical results.</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════ DATA ENTRY TABLE ═══════════ -->
+    <div class="pg-data-panel">
+      <div class="pg-data-header">
+        <div class="pg-data-title"><i class="ti ti-table"></i> Order Dataset</div>
+        <div class="pg-data-actions">
+          <button class="pg-btn primary" onclick="addRow()"><i class="ti ti-plus"></i> Add Order</button>
+          <button class="pg-btn" onclick="addBulkRows()"><i class="ti ti-row-insert-bottom"></i> Add Bulk</button>
+          <button class="pg-btn danger" onclick="clearRows()"><i class="ti ti-trash"></i> Clear All</button>
+        </div>
+      </div>
+
+      <div class="pg-data-summary" id="pg-summary">
+        <span class="summary-chip chip-total"><i class="ti ti-package"></i> 0 orders</span>
+        <span class="summary-chip chip-dom"><i class="ti ti-home"></i> 0 dom</span>
+        <span class="summary-chip chip-ess"><i class="ti ti-first-aid-kit"></i> 0 ess</span>
+        <span class="summary-chip chip-com"><i class="ti ti-building-store"></i> 0 com</span>
+        <span style="flex:1;"></span>
+        <span class="summary-chip chip-total"><i class="ti ti-cylinder"></i> 0 cylinders demanded</span>
+        <span class="summary-chip chip-gap" id="pg-gap-chip"><i class="ti ti-arrow-down"></i> 0 gap</span>
+      </div>
+
+      <div class="pg-table-wrap">
+        <table class="pg-table">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th style="width:14%">Consumer Type</th>
+              <th style="width:22%">Consumer Name</th>
+              <th style="width:12%">Cylinders</th>
+              <th style="width:14%">Booking Date</th>
+              <th style="width:12%">Wait Days</th>
+              <th style="width:10%">Priority Score</th>
+              <th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="pg-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════ RUN BAR ═══════════ -->
+    <div class="pg-run-bar">
+      <div class="pg-run-info">
+        <i class="ti ti-info-circle" style="color:#6366f1;"></i>
+        <span id="pg-run-info-text">Configure your test data above, then hit Run to simulate.</span>
+      </div>
+      <button class="pg-run-btn" id="pg-run-btn" onclick="runPlayground()">
+        <i class="ti ti-player-play"></i> Run Simulation
+      </button>
+    </div>
+
+    <!-- ═══════════ RESULTS ═══════════ -->
+    <div class="pg-results" id="pg-results">
+
+      <!-- Verdict -->
+      <div class="pg-verdict" id="pg-verdict">
+        <div class="pg-verdict-title" id="pg-verdict-title"></div>
+        <div class="pg-verdict-text" id="pg-verdict-text"></div>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="pg-kpi-row" id="pg-kpi-row"></div>
+
+      <!-- Queue Visualization -->
+      <div class="pg-queue-viz" id="pg-queue-viz"></div>
+
+      <!-- Side-by-side comparison -->
+      <div class="pg-compare" id="pg-compare"></div>
+
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// ALGORITHM PLAYGROUND — Controller
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── State (must be declared BEFORE any function uses them) ────────────
+var pgRowId = 0;
+var selectedAlgos = { fcfs: true, smart: true };
+
+// ── Unified toast helper (utils.js uses "toast", layout.js uses "showToast") ──
+function pgToast(msg, type) {
+  if (typeof showToast === 'function') return showToast(msg, type);
+  if (typeof toast === 'function') return toast(msg, type);
+}
+
+if (!requireAuth()) {}
+else {
+  renderSidebar('simulator');
+  initPlayground();
+}
+
+function initPlayground() {
+  loadAgencies();
+  loadPreset('demo', false);
+  // Attach listeners
+  document.getElementById('pg-stock').addEventListener('input', updateSummary);
+  document.getElementById('pg-crisis').addEventListener('change', updateSummary);
+}
+
+// ── Algorithm Selection ───────────────────────────────────────────────
+function toggleAlgo(algo) {
+  selectedAlgos[algo] = !selectedAlgos[algo];
+  // At least one must be selected
+  if (!selectedAlgos.fcfs && !selectedAlgos.smart) {
+    selectedAlgos[algo] = true;
+    pgToast('At least one algorithm must be selected.', 'warning');
+    return;
+  }
+  refreshAlgoCards();
+}
+
+function refreshAlgoCards() {
+  ['fcfs', 'smart'].forEach(a => {
+    const card = document.getElementById(`algo-${a}-card`);
+    if (selectedAlgos[a]) {
+      card.classList.add('selected');
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+}
+
+// ── Agency Loading ────────────────────────────────────────────────────
+async function loadAgencies() {
+  const sel = document.getElementById('pg-agency');
+  try {
+    const data = await api.get('/agencies/?page_size=100');
+    const list = data.results || [];
+    sel.innerHTML = '<option value="">Standalone simulation (no agency)</option>' +
+      list.map(a => `<option value="${a.agency_id}">${esc(a.agency_name || 'Agency #' + a.agency_id)}</option>`).join('');
+  } catch(e) { /* keep default */ }
+}
+
+// ── Preset Scenarios ──────────────────────────────────────────────────
+function loadPreset(name, notify = true) {
+  clearRows(false);
+  const el = document.getElementById('pg-results');
+  if (el) el.style.display = 'none';
+
+  const presets = {
+    demo: {
+      stock: 8,
+      crisis: false,
+      rows: [
+        { type:'domestic', name:'Ramesh Kumar', qty:5, date:'2026-05-26', days:1 },
+        { type:'commercial', name:'Hotel Grand Palace', qty:6, date:'2026-05-25', days:2 },
+      ]
+    },
+    crisis: {
+      stock: 10,
+      crisis: true,
+      rows: [
+        { type:'domestic', name:'Priya Sharma', qty:3, date:'2026-05-26', days:1 },
+        { type:'domestic', name:'Arun Reddy', qty:2, date:'2026-05-24', days:3 },
+        { type:'essential', name:'City Hospital Kitchen', qty:4, date:'2026-05-23', days:4 },
+        { type:'commercial', name:'Taj Restaurant', qty:6, date:'2026-05-22', days:5 },
+        { type:'commercial', name:'Spice Garden Dhaba', qty:5, date:'2026-05-21', days:6 },
+      ]
+    },
+    starvation: {
+      stock: 15,
+      crisis: false,
+      rows: [
+        { type:'domestic', name:'Family Home A', qty:2, date:'2026-05-26', days:0 },
+        { type:'domestic', name:'Family Home B', qty:3, date:'2026-05-25', days:1 },
+        { type:'domestic', name:'Family Home C', qty:2, date:'2026-05-24', days:2 },
+        { type:'essential', name:'School Canteen', qty:4, date:'2026-05-20', days:6 },
+        { type:'commercial', name:'Old Waiting Restaurant', qty:5, date:'2026-05-01', days:25 },
+        { type:'commercial', name:'Warehouse Depot', qty:8, date:'2026-05-02', days:24 },
+        { type:'commercial', name:'Fresh Order Corp', qty:3, date:'2026-05-26', days:0 },
+      ]
+    },
+    heavy: {
+      stock: 30,
+      crisis: false,
+      rows: generateHeavyRows(25)
+    },
+    equal: {
+      stock: 8,
+      crisis: false,
+      rows: [
+        { type:'domestic', name:'Equal Test A', qty:2, date:'2026-05-26', days:0 },
+        { type:'domestic', name:'Equal Test B', qty:2, date:'2026-05-26', days:0 },
+        { type:'domestic', name:'Equal Test C', qty:2, date:'2026-05-26', days:0 },
+        { type:'domestic', name:'Equal Test D', qty:2, date:'2026-05-26', days:0 },
+        { type:'domestic', name:'Equal Test E', qty:2, date:'2026-05-26', days:0 },
+      ]
+    },
+    mixed: {
+      stock: null, // auto-calc
+      crisis: false,
+      rows: null // auto-gen
+    }
+  };
+
+  const preset = presets[name];
+  if (!preset) return;
+
+  if (name === 'mixed') {
+    const count = Math.max(1, Math.min(100, parseInt(document.getElementById('pg-bulk-count').value) || 10));
+    const rows = generateMixedRows(count);
+    rows.forEach(r => addRow(r.type, r.name, r.qty, r.date, r.days));
+    document.getElementById('pg-stock').value = Math.max(5, Math.round(count * 2.5));
+    document.getElementById('pg-crisis').checked = false;
+  } else {
+    if (preset.stock != null) document.getElementById('pg-stock').value = preset.stock;
+    document.getElementById('pg-crisis').checked = !!preset.crisis;
+    preset.rows.forEach(r => addRow(r.type, r.name, r.qty, r.date, r.days));
+  }
+
+  updateSummary();
+  if (notify) pgToast(`Preset "${name}" loaded with ${document.querySelectorAll('#pg-tbody tr').length} orders.`, 'success');
+}
+
+function generateHeavyRows(count) {
+  const types = ['domestic','essential','commercial'];
+  const names = {
+    domestic: ['Household', 'Family', 'Home', 'Apartment', 'Residence'],
+    essential: ['Hospital', 'School', 'Clinic', 'Shelter', 'Hostel'],
+    commercial: ['Restaurant', 'Hotel', 'Factory', 'Warehouse', 'Cafe']
+  };
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const type = types[i % 3];
+    const nameList = names[type];
+    const qty = type === 'domestic' ? 1 + (i % 4) : type === 'essential' ? 2 + (i % 5) : 3 + (i % 8);
+    const day = Math.max(1, 26 - (i % 20));
+    rows.push({
+      type,
+      name: `${nameList[i % nameList.length]} #${i + 1}`,
+      qty,
+      date: `2026-05-${String(day).padStart(2, '0')}`,
+      days: i % 15
+    });
+  }
+  return rows;
+}
+
+function generateMixedRows(count) {
+  const types = ['domestic','essential','commercial'];
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const type = types[Math.floor(Math.random() * 3)];
+    const qty = type === 'domestic' ? 1 + Math.floor(Math.random() * 4) :
+                type === 'essential' ? 2 + Math.floor(Math.random() * 5) :
+                3 + Math.floor(Math.random() * 8);
+    const day = Math.max(1, 26 - Math.floor(Math.random() * 25));
+    rows.push({
+      type,
+      name: `${type.charAt(0).toUpperCase() + type.slice(1)} User ${i + 1}`,
+      qty,
+      date: `2026-05-${String(day).padStart(2, '0')}`,
+      days: Math.floor(Math.random() * 20)
+    });
+  }
+  return rows;
+}
+
+// ── Row Management ────────────────────────────────────────────────────
+function addRow(type = 'domestic', name = '', qty = 1, date = '2026-05-26', days = 0) {
+  pgRowId++;
+  const id = pgRowId;
+  const priorityRanks = { domestic: 1, essential: 2, commercial: 3 };
+  const score = (priorityRanks[type] || 3) - (0.02 * Math.max(0, days));
+  const tbody = document.getElementById('pg-tbody');
+  const tr = document.createElement('tr');
+  tr.id = `pg-row-${id}`;
+  tr.innerHTML = `
+    <td class="pg-row-num">${document.querySelectorAll('#pg-tbody tr').length + 1}</td>
+    <td>
+      <select class="pg-type" onchange="onRowChange(this)">
+        <option value="domestic" ${type==='domestic'?'selected':''}>🏠 Domestic</option>
+        <option value="essential" ${type==='essential'?'selected':''}>🏥 Essential</option>
+        <option value="commercial" ${type==='commercial'?'selected':''}>🏢 Commercial</option>
+      </select>
+    </td>
+    <td><input type="text" class="pg-name" value="${esc(name)}" placeholder="Consumer name..." onchange="onRowChange(this)"></td>
+    <td><input type="number" class="pg-qty" value="${qty}" min="1" max="50" onchange="onRowChange(this)" oninput="onRowChange(this)"></td>
+    <td><input type="date" class="pg-date" value="${date}" onchange="onRowChange(this)"></td>
+    <td><input type="number" class="pg-days" value="${days}" min="0" max="365" onchange="onRowChange(this)" oninput="onRowChange(this)"></td>
+    <td class="pg-score-cell" style="font-size:12px;font-weight:700;color:#a5b4fc;text-align:center;">${score.toFixed(2)}</td>
+    <td><button class="pg-del-btn" onclick="deleteRow(${id})" title="Remove"><i class="ti ti-x"></i></button></td>
+  `;
+  tbody.appendChild(tr);
+  updateSummary();
+}
+
+function onRowChange(el) {
+  const row = el.closest('tr');
+  const type = row.querySelector('.pg-type').value;
+  const days = parseInt(row.querySelector('.pg-days').value) || 0;
+  const priorityRanks = { domestic: 1, essential: 2, commercial: 3 };
+  const score = (priorityRanks[type] || 3) - (0.02 * Math.max(0, days));
+  row.querySelector('.pg-score-cell').textContent = score.toFixed(2);
+  updateSummary();
+}
+
+function deleteRow(id) {
+  const row = document.getElementById(`pg-row-${id}`);
+  if (row) row.remove();
+  renumber();
+  updateSummary();
+}
+
+function clearRows(notify = true) {
+  document.getElementById('pg-tbody').innerHTML = '';
+  pgRowId = 0;
+  updateSummary();
+  if (notify) {
+    document.getElementById('pg-results').style.display = 'none';
+    pgToast('All rows cleared.', 'info');
+  }
+}
+
+function addBulkRows() {
+  const count = Math.max(1, Math.min(50, parseInt(document.getElementById('pg-bulk-count').value) || 5));
+  const types = ['domestic','essential','commercial'];
+  for (let i = 0; i < count; i++) {
+    const type = types[Math.floor(Math.random() * 3)];
+    const qty = type === 'domestic' ? 1 + Math.floor(Math.random() * 4) :
+                type === 'essential' ? 2 + Math.floor(Math.random() * 5) :
+                3 + Math.floor(Math.random() * 8);
+    const day = Math.max(1, 26 - Math.floor(Math.random() * 20));
+    addRow(type, `${type.charAt(0).toUpperCase() + type.slice(1)} User ${pgRowId + 1}`, qty,
+      `2026-05-${String(day).padStart(2,'0')}`, Math.floor(Math.random() * 15));
+  }
+  pgToast(`${count} rows added.`, 'success');
+}
+
+function renumber() {
+  document.querySelectorAll('#pg-tbody tr').forEach((row, i) => {
+    const num = row.querySelector('.pg-row-num');
+    if (num) num.textContent = i + 1;
+  });
+}
+
+function updateSummary() {
+  const rows = document.querySelectorAll('#pg-tbody tr');
+  let demand = 0;
+  const counts = { domestic: 0, essential: 0, commercial: 0 };
+  rows.forEach(row => {
+    const type = row.querySelector('.pg-type')?.value || 'domestic';
+    const qty = Math.max(1, parseInt(row.querySelector('.pg-qty')?.value) || 1);
+    demand += qty;
+    counts[type] = (counts[type] || 0) + 1;
+  });
+  const stock = Math.max(0, parseInt(document.getElementById('pg-stock')?.value) || 0);
+  const gap = demand - stock;
+
+  document.getElementById('pg-summary').innerHTML = `
+    <span class="summary-chip chip-total"><i class="ti ti-package"></i> ${rows.length} orders</span>
+    <span class="summary-chip chip-dom"><i class="ti ti-home"></i> ${counts.domestic} dom</span>
+    <span class="summary-chip chip-ess"><i class="ti ti-first-aid-kit"></i> ${counts.essential} ess</span>
+    <span class="summary-chip chip-com"><i class="ti ti-building-store"></i> ${counts.commercial} com</span>
+    <span style="flex:1;"></span>
+    <span class="summary-chip chip-total"><i class="ti ti-cylinder"></i> ${demand} cylinders demanded</span>
+    <span class="summary-chip ${gap > 0 ? 'chip-gap' : 'chip-dom'}" id="pg-gap-chip">
+      <i class="ti ${gap > 0 ? 'ti-arrow-down' : 'ti-arrow-up'}"></i>
+      ${gap > 0 ? gap + ' shortage' : Math.abs(gap) + ' surplus'}
+    </span>
+  `;
+
+  document.getElementById('pg-run-info-text').textContent =
+    `${rows.length} orders, ${demand} cylinders demanded vs ${stock} available. ${selectedAlgos.fcfs && selectedAlgos.smart ? 'Comparing both algorithms.' : selectedAlgos.fcfs ? 'FCFS only.' : 'Smart Priority only.'}`;
+}
+
+// ── Escape HTML ───────────────────────────────────────────────────────
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── RUN SIMULATION ────────────────────────────────────────────────────
+async function runPlayground() {
+  const rows = document.querySelectorAll('#pg-tbody tr');
+  if (!rows.length) {
+    pgToast('Add at least one order before running.', 'error');
+    return;
+  }
+
+  const stock = parseInt(document.getElementById('pg-stock').value) || 0;
+  const crisis = document.getElementById('pg-crisis').checked;
+  const bookings = [];
+
+  rows.forEach((row, i) => {
+    bookings.push({
+      booking_id: i + 1,
+      consumer_name: row.querySelector('.pg-name').value.trim() || `Consumer #${i+1}`,
+      consumer_type: row.querySelector('.pg-type').value,
+      cylinders_requested: parseInt(row.querySelector('.pg-qty').value) || 1,
+      booking_date: row.querySelector('.pg-date').value || '2026-05-26',
+      waiting_days: parseInt(row.querySelector('.pg-days').value) || 0,
+    });
+  });
+
+  // Disable button
+  const btn = document.getElementById('pg-run-btn');
+  btn.classList.add('running');
+  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite;"></i> Running...';
+
+  try {
+    const result = await api.post('/allocation/simulate', {
+      available_stock: stock,
+      crisis_mode: crisis,
+      bookings: bookings
+    });
+
+    renderResults(result, bookings);
+    document.getElementById('pg-results').style.display = 'block';
+    document.getElementById('pg-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    pgToast('Simulation complete!', 'success');
+  } catch(e) {
+    pgToast(`Simulation failed: ${e.message}`, 'error');
+  } finally {
+    btn.classList.remove('running');
+    btn.innerHTML = '<i class="ti ti-player-play"></i> Run Simulation';
+  }
+}
+
+// ── RENDER RESULTS ────────────────────────────────────────────────────
+function renderResults(result, bookings) {
+  const s = result.summary || {};
+  const fcfs = result.fcfs;
+  const smart = result.smart;
+
+  // ─── Verdict ───────────────────────────────────────
+  const el = document.getElementById('pg-verdict');
+  const smartServed = s.smart_allocated_qty || 0;
+  const fcfsServed = s.fcfs_allocated_qty || 0;
+  const smartDom = s.smart_domestic_qty || 0;
+  const fcfsDom = s.fcfs_domestic_qty || 0;
+  const idleSaved = s.smart_idle_saved_qty || 0;
+  const extraAlloc = s.smart_extra_allocated_qty || 0;
+
+  let vClass = 'tie', vTitle = '', vText = '';
+
+  if (smartServed > fcfsServed || smartDom > fcfsDom || idleSaved > 0) {
+    vClass = 'win';
+    vTitle = '🏆 Smart Priority Engine outperforms FCFS on this dataset';
+    const points = [];
+    if (extraAlloc > 0) points.push(`Serves <strong>${extraAlloc} more cylinder(s)</strong> than FCFS`);
+    if (smartDom > fcfsDom) points.push(`Protects <strong>${smartDom - fcfsDom} extra domestic cylinder(s)</strong>`);
+    if (idleSaved > 0) points.push(`Eliminates <strong>${idleSaved} idle/wasted cylinder(s)</strong> via pro-rata splitting`);
+    vText = points.join(' · ') + '. The Smart Priority Engine maximises utilisation by splitting partial orders instead of blocking them.';
+  } else if (smartServed < fcfsServed) {
+    vClass = 'lose';
+    vTitle = '⚖️ FCFS allocates more total cylinders for this input';
+    vText = 'This happens when all orders are the same type/date — FCFS processes them chronologically without priority overhead. Try adding diverse consumer types or a shortage scenario to see the Smart engine\'s advantage.';
+  } else {
+    vClass = 'tie';
+    vTitle = '🤝 Both algorithms produced identical results';
+    vText = 'With sufficient stock and uniform consumer types, both algorithms converge. Introduce a cylinder shortage or mixed consumer types to see divergent outcomes.';
+  }
+
+  el.className = `pg-verdict ${vClass}`;
+  document.getElementById('pg-verdict-title').innerHTML = vTitle;
+  document.getElementById('pg-verdict-text').innerHTML = vText;
+
+  // ─── KPI Cards ─────────────────────────────────────
+  const totalReq = s.total_requested_qty || 0;
+  const kpiHtml = `
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">Total Demand</div>
+      <div class="pg-kpi-value">${totalReq}</div>
+      <div class="pg-kpi-sub">${bookings.length} orders</div>
+    </div>
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">Available Stock</div>
+      <div class="pg-kpi-value blue">${s.available_stock || 0}</div>
+      <div class="pg-kpi-sub">cylinders</div>
+    </div>
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">FCFS Served</div>
+      <div class="pg-kpi-value">${fcfsServed}</div>
+      <div class="pg-kpi-sub">${fcfs.allocated.length} orders fulfilled</div>
+    </div>
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">Smart Served</div>
+      <div class="pg-kpi-value ${smartServed >= fcfsServed ? 'green' : 'red'}">${smartServed}</div>
+      <div class="pg-kpi-sub">${smart.allocated.length} orders fulfilled</div>
+    </div>
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">FCFS Idle Stock</div>
+      <div class="pg-kpi-value ${fcfs.remaining_stock > 0 ? 'red' : 'green'}">${fcfs.remaining_stock}</div>
+      <div class="pg-kpi-sub">wasted cylinders</div>
+    </div>
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">Smart Idle Stock</div>
+      <div class="pg-kpi-value ${smart.remaining_stock > 0 ? 'orange' : 'green'}">${smart.remaining_stock}</div>
+      <div class="pg-kpi-sub">wasted cylinders</div>
+    </div>
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">Domestic Protected</div>
+      <div class="pg-kpi-value blue">${smartDom} vs ${fcfsDom}</div>
+      <div class="pg-kpi-sub">Smart / FCFS</div>
+    </div>
+    <div class="pg-kpi">
+      <div class="pg-kpi-label">Extra by Smart</div>
+      <div class="pg-kpi-value ${extraAlloc > 0 ? 'green' : ''}">${extraAlloc > 0 ? '+' : ''}${extraAlloc}</div>
+      <div class="pg-kpi-sub">additional cylinders</div>
+    </div>
+  `;
+  document.getElementById('pg-kpi-row').innerHTML = kpiHtml;
+
+  // ─── Queue Visualization ───────────────────────────
+  const typeClass = t => t === 'domestic' ? 'dom' : t === 'essential' ? 'ess' : 'com';
+  const typeEmoji = t => t === 'domestic' ? '🏠' : t === 'essential' ? '🏥' : '🏢';
+
+  // Map booking IDs to names/types
+  const bMap = {};
+  bookings.forEach(b => { bMap[b.booking_id] = b; });
+
+  const fcfsChips = (fcfs.allocation_order || []).map(id => {
+    const b = bMap[id]; if (!b) return '';
+    return `<span class="pg-queue-chip ${typeClass(b.consumer_type)}">${typeEmoji(b.consumer_type)} ${esc(b.consumer_name)}</span>`;
+  }).join('');
+  const smartChips = (smart.allocation_order || []).map(id => {
+    const b = bMap[id]; if (!b) return '';
+    return `<span class="pg-queue-chip ${typeClass(b.consumer_type)}">${typeEmoji(b.consumer_type)} ${esc(b.consumer_name)}</span>`;
+  }).join('');
+
+  document.getElementById('pg-queue-viz').innerHTML = `
+    <div class="pg-queue-title"><i class="ti ti-arrows-sort"></i> Processing Order Comparison</div>
+    <div class="pg-queue-row">
+      <div class="pg-queue-label" style="color:#64748b;">FCFS →</div>
+      <div class="pg-queue-items">${fcfsChips || '<span style="color:#475569;font-size:12px;">No data</span>'}</div>
+    </div>
+    <div class="pg-queue-row">
+      <div class="pg-queue-label" style="color:#f97316;">Smart →</div>
+      <div class="pg-queue-items">${smartChips || '<span style="color:#475569;font-size:12px;">No data</span>'}</div>
+    </div>
+    <p style="font-size:11px; color:#475569; margin-top:8px; line-height:1.5;">
+      FCFS sorts strictly by booking date. Smart Priority sorts by effective priority score
+      (consumer tier + ageing bonus), then by date within each tier.
+    </p>
+  `;
+
+  // ─── Side-by-side Column Tables ────────────────────
+  let compareHtml = '';
+
+  if (selectedAlgos.fcfs) {
+    compareHtml += renderAlgoColumn('FCFS (Legacy)', '#64748b', fcfs, false);
+  }
+  if (selectedAlgos.smart) {
+    compareHtml += renderAlgoColumn('Smart Priority Engine', '#f97316', smart, true);
+  }
+
+  document.getElementById('pg-compare').innerHTML = compareHtml;
+  // If only one algo, make single column
+  if (!selectedAlgos.fcfs || !selectedAlgos.smart) {
+    document.getElementById('pg-compare').style.gridTemplateColumns = '1fr';
+  } else {
+    document.getElementById('pg-compare').style.gridTemplateColumns = '1fr 1fr';
+  }
+}
+
+function renderAlgoColumn(title, color, data, isSmart) {
+  const allocCount = data.allocated.length;
+  const skipCount = data.skipped.length;
+  const splitCount = isSmart ? data.allocated.filter(x => x.is_shortage_split || x.is_crisis_capped).length : 0;
+
+  let rows = '';
+  data.allocated.forEach(b => {
+    const badgeCls = (b.is_shortage_split || b.is_crisis_capped) ? 'partial' : 'success';
+    const badgeText = (b.is_shortage_split || b.is_crisis_capped)
+      ? `Partial: ${b.allocated_qty}/${b.requested_qty}`
+      : `Full: ${b.allocated_qty}`;
+    rows += `<tr>
+      <td><strong>${esc(b.consumer_name)}</strong><br><span class="badge badge-${b.consumer_type}" style="font-size:9px;">${b.consumer_type}</span></td>
+      <td style="text-align:center;">${b.requested_qty}</td>
+      <td style="text-align:center;font-weight:700;color:${badgeCls==='success'?'#4ade80':'#fb923c'};">${b.allocated_qty}</td>
+      <td><span class="pg-alloc-badge ${badgeCls}">${badgeText}</span>
+        ${b.reason && b.reason !== 'Allocated in full' && b.reason !== 'Successfully allocated' ? `<div style="font-size:9px;color:#94a3b8;margin-top:2px;">${esc(b.reason)}</div>` : ''}
+      </td>
+    </tr>`;
+  });
+  data.skipped.forEach(b => {
+    rows += `<tr style="opacity:0.7;">
+      <td><strong>${esc(b.consumer_name)}</strong><br><span class="badge badge-${b.consumer_type}" style="font-size:9px;">${b.consumer_type}</span></td>
+      <td style="text-align:center;">${b.requested_qty}</td>
+      <td style="text-align:center;color:#f87171;font-weight:700;">0</td>
+      <td><span class="pg-alloc-badge skipped">Skipped</span>
+        <div style="font-size:9px;color:#94a3b8;margin-top:2px;">${esc(b.reason)}</div>
+      </td>
+    </tr>`;
+  });
+
+  return `
+    <div class="pg-col ${isSmart ? 'smart-col' : ''}">
+      <div class="pg-col-header">
+        <div class="pg-col-dot" style="background:${color};"></div>
+        <div class="pg-col-name" style="color:${color};">${title}</div>
+      </div>
+      <div class="pg-col-mini-stats">
+        <div class="pg-col-stat">
+          <div class="pg-col-stat-val" style="color:#4ade80;">${allocCount}</div>
+          <div class="pg-col-stat-lbl">Allocated</div>
+        </div>
+        <div class="pg-col-stat">
+          <div class="pg-col-stat-val" style="color:#f87171;">${skipCount}</div>
+          <div class="pg-col-stat-lbl">Skipped</div>
+        </div>
+        <div class="pg-col-stat">
+          <div class="pg-col-stat-val" style="color:${data.remaining_stock > 0 ? '#f87171' : '#4ade80'};">${data.remaining_stock}</div>
+          <div class="pg-col-stat-lbl">Idle Stock</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;border:1px solid #334155;border-radius:8px;">
+        <table class="pg-result-table">
+          <thead><tr>
+            <th>Consumer</th>
+            <th style="text-align:center;">Req</th>
+            <th style="text-align:center;">Got</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:#475569;padding:16px;">No orders processed</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// Spin animation for loader
+const spinStyle = document.createElement('style');
+spinStyle.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+document.head.appendChild(spinStyle);
+</script>
+</body>
+</html>

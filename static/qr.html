@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR Verify — LPG System</title>
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">QR Code Verification</div>
+        <div class="page-sub">View, download and verify delivery QR codes</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">View QR Code</div>
+        <div class="form-group">
+          <label>Booking ID</label>
+          <input type="text" id="qr-booking-id" placeholder="Enter booking ID">
+        </div>
+        <div style="display:flex; gap:10px; width:100%;">
+          <button class="btn btn-secondary" style="flex:1;" onclick="loadQR()">Load QR</button>
+          <button class="btn btn-primary" style="flex:1;" onclick="generateQR()">Generate QR</button>
+        </div>
+        <div id="qr-display" style="margin-top:20px;text-align:center"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Scan & Verify</div>
+        <div class="form-group">
+          <label>QR Token (64-char)</label>
+          <textarea id="qr-token" placeholder="Paste the 64-character token..." rows="4"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Action</label>
+          <select id="qr-action">
+            <option value="view">View Details</option>
+            <option value="verify">Mark Delivered</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="verifyQR()">Verify QR</button>
+        <div id="qr-result" style="margin-top:15px"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+requireAuth();
+renderSidebar('qr');
+
+async function loadQR() {
+  const id = document.getElementById('qr-booking-id').value;
+  if (!id) return toast('Enter booking ID', 'error');
+  try {
+    const data = await api.get(`/qr/${id}`);
+    document.getElementById('qr-display').innerHTML = data.qr_image_b64 ? `<div style="background:white;padding:20px;border-radius:8px;display:inline-block"><img src="data:image/png;base64,${data.qr_image_b64}" style="max-width:200px"><br><small style="color:#64748b">Booking #${data.booking_id} - ${data.full_name}</small></div>` : '<p style="color:#dc2626">No QR image available</p>';
+    if (data.token) {
+      document.getElementById('qr-token').value = data.token;
+    }
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function generateQR() {
+  const id = document.getElementById('qr-booking-id').value;
+  if (!id) return toast('Enter booking ID', 'error');
+  try {
+    const data = await api.post('/qr/generate', { booking_id: parseInt(id) });
+    document.getElementById('qr-display').innerHTML = data.png_b64 ? `<div style="background:white;padding:20px;border-radius:8px;display:inline-block"><img src="data:image/png;base64,${data.png_b64}" style="max-width:200px"><br><small style="color:#64748b">Booking #${data.booking_id} - ${data.consumer_name}</small></div>` : '<p style="color:#dc2626">No QR image available</p>';
+    if (data.token) {
+      document.getElementById('qr-token').value = data.token;
+    }
+    toast('QR Code generated successfully', 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function verifyQR() {
+  const token = document.getElementById('qr-token').value;
+  const action = document.getElementById('qr-action').value;
+  if (!token) return toast('Enter QR token', 'error');
+  try {
+    const result = await api.post('/qr/scan', { token: token, action: action === "verify" ? "mark_delivered" : "view_details" });
+    const resultDiv = document.getElementById('qr-result');
+    
+    // Status style and wording logic
+    let badgeClass = 'badge-pending';
+    let statusText = 'Pending Allocation';
+    
+    const bStatus = (result.booking_status || '').toLowerCase();
+    const dStatus = (result.delivery_status || '').toLowerCase();
+    
+    if (bStatus === 'cancelled') {
+      statusText = 'Cancelled';
+      badgeClass = 'badge-cancelled';
+    } else if (bStatus === 'delivered' || dStatus === 'delivered') {
+      statusText = 'Delivered Successfully';
+      badgeClass = 'badge-delivered';
+    } else if (dStatus === 'out_for_delivery') {
+      statusText = 'Out For Delivery';
+      badgeClass = 'badge-allocated';
+    } else if (bStatus === 'allocated') {
+      statusText = 'Allocation Successful';
+      badgeClass = 'badge-allocated';
+    } else if (bStatus === 'pending') {
+      statusText = 'Pending Allocation';
+      badgeClass = 'badge-pending';
+    }
+    
+    resultDiv.innerHTML = `
+      <div style="background:#1e293b; border:1px solid #334155; padding:20px; border-radius:8px; border-left:4px solid #10b981; margin-top: 15px;">
+        <div style="font-weight:600; color:#34d399; font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+          ✓ Scan Verification Successful
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#cbd5e1;">
+          <div><strong>Booking ID:</strong> #${result.booking_id}</div>
+          <div><strong>Customer Name:</strong> ${result.consumer_name || 'Client'}</div>
+          <div><strong>Distributor:</strong> ${result.agency_name || 'Agency'}</div>
+          <div><strong>LPG cylinders:</strong> ${result.cylinders} Cylinder(s)</div>
+          <div style="grid-column: span 2; margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+            <strong>Order Status:</strong> <span class="badge ${badgeClass}">${statusText.toUpperCase()}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    toast('QR Code scanned and verified', 'success');
+  } catch (e) {
+    const resultDiv = document.getElementById('qr-result');
+    resultDiv.innerHTML = `<div style="background:#fee2e2;padding:15px;border-radius:6px;color:#991b1b"><strong>✗ Verification Failed</strong><br>${e.message}</div>`;
+    toast(e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>
+
+
