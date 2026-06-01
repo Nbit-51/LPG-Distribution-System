@@ -1,4 +1,4 @@
-﻿from mysql.connector import pooling
+from mysql.connector import pooling
 
 _pool = None
 
@@ -6,9 +6,9 @@ def _get_pool():
     global _pool
     if _pool is None:
         from app.config import settings
-        _pool = pooling.MySQLConnectionPool(
+        pool_kwargs = dict(
             pool_name="lpg_pool",
-            pool_size=10,
+            pool_size=5,
             host=settings.db_host,
             port=settings.db_port,
             database=settings.db_name,
@@ -16,6 +16,10 @@ def _get_pool():
             password=settings.db_password,
             autocommit=False,
         )
+        # Enable SSL for cloud databases (non-localhost)
+        if settings.db_host not in ("localhost", "127.0.0.1"):
+            pool_kwargs["ssl_disabled"] = False
+        _pool = pooling.MySQLConnectionPool(**pool_kwargs)
     return _pool
 
 def get_connection():
