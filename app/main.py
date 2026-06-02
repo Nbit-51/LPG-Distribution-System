@@ -1,6 +1,6 @@
 import os
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,7 +44,35 @@ if HAS_QR:
     app.include_router(qr_router)
 
 
+# ─── Health / Keep-alive (also warms DB on first hit after cold start) ───
+@app.get("/health")
+async def health():
+    from app.database import health_check
+    db_ok = health_check()
+    return JSONResponse({"status": "ok", "db": db_ok}, status_code=200)
+
+# ─── Non-blocking DB warmup on startup ───
+@app.on_event("startup")
+async def startup_warmup():
+    import asyncio
+    async def _warm():
+        await asyncio.sleep(0.1)  # let the server start accepting first
+        try:
+            from app.database import health_check
+            health_check()
+            print("[startup] DB pool warmed up")
+        except Exception as e:
+            print(f"[startup] DB warmup deferred: {e}")
+    asyncio.create_task(_warm())
+
+
+# ─── Pages ───
+
 @app.get("/", response_class=HTMLResponse)
+async def home_page(request: Request):
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+@app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     return FileResponse(os.path.join(STATIC_DIR, "landing.html"))
 
@@ -99,9 +127,6 @@ async def policies_page(request: Request):
 @app.get("/invoices-page", response_class=HTMLResponse)
 async def invoices_page(request: Request):
     return FileResponse(os.path.join(STATIC_DIR, "invoices.html"))
-
-
-
 
 
 @app.get('/consumers-page-admin', response_class=HTMLResponse)

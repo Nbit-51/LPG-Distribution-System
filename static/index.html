@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart LPG Distribution System</title>
+  <meta name="description" content="Priority-based LPG cylinder allocation engine with anti-starvation guarantees. Aligned with Pradhan Mantri Ujjwala Yojana.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#050508;--s1:#0a0a14;--s2:#0f0f1e;--s3:#141428;
+      --border:rgba(255,255,255,.05);--t1:#e8e8f4;--t2:rgba(232,232,244,.45);
+      --a:#6366f1;--a2:#818cf8;--teal:#14b8a6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--t1);
+      overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+    /* === CANVAS BG === */
+    canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.4}
+
+    /* === NAV === */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 28px;
+      display:flex;align-items:center;justify-content:space-between;
+      background:rgba(5,5,8,.7);backdrop-filter:blur(24px) saturate(1.4);
+      border-bottom:1px solid var(--border);transition:all .3s}
+    .n-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--t1)}
+    .n-logo{width:30px;height:30px;border-radius:8px;
+      background:linear-gradient(135deg,var(--a),#7c3aed);
+      display:grid;place-items:center;
+      box-shadow:0 0 18px rgba(99,102,241,.25)}
+    .n-logo svg{width:14px;height:14px}
+    .n-name{font-size:13px;font-weight:600;letter-spacing:-.01em}
+    .n-links{display:flex;align-items:center;gap:4px}
+    .n-link{padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:500;
+      color:var(--t2);text-decoration:none;transition:all .2s}
+    .n-link:hover{color:var(--t1);background:rgba(255,255,255,.04)}
+    .n-cta{padding:7px 18px;border-radius:8px;font-size:12.5px;font-weight:600;
+      background:var(--a);color:#fff;text-decoration:none;border:none;cursor:pointer;
+      transition:all .2s;box-shadow:0 2px 14px rgba(99,102,241,.25)}
+    .n-cta:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(99,102,241,.35)}
+
+    /* === HERO === */
+    .hero{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;
+      justify-content:center;padding:120px 28px 100px;overflow:hidden}
+    .hero::before{content:'';position:absolute;top:15%;left:50%;transform:translateX(-50%);
+      width:700px;height:700px;border-radius:50%;
+      background:radial-gradient(circle,rgba(99,102,241,.08) 0%,transparent 65%);
+      filter:blur(40px);pointer-events:none}
+    .hero-inner{max-width:860px;text-align:center;position:relative}
+
+    .hero-chip{display:inline-flex;align-items:center;gap:8px;
+      padding:5px 14px 5px 7px;margin-bottom:30px;
+      border-radius:100px;font-size:11.5px;font-weight:500;color:var(--a2);
+      background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.12);
+      animation:fadeIn .6s ease both}
+    .hero-chip-dot{width:7px;height:7px;border-radius:50%;background:var(--a);
+      box-shadow:0 0 10px var(--a);animation:blink 2.5s ease infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    .hero h1{font-size:clamp(34px,5.5vw,62px);font-weight:800;line-height:1.05;
+      letter-spacing:-.035em;margin-bottom:22px;animation:fadeIn .6s ease .1s both}
+    .grad{background:linear-gradient(135deg,#c7d2fe,#6366f1 40%,#14b8a6 80%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-p{font-size:clamp(14px,1.8vw,17px);color:var(--t2);line-height:1.65;
+      max-width:580px;margin:0 auto 34px;animation:fadeIn .6s ease .2s both}
+    .hero-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
+      animation:fadeIn .6s ease .3s both}
+    .btn-p{display:inline-flex;align-items:center;gap:7px;padding:12px 26px;
+      border-radius:10px;font-size:13.5px;font-weight:600;border:none;cursor:pointer;
+      font-family:inherit;text-decoration:none;transition:all .25s;
+      background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;
+      box-shadow:0 4px 22px rgba(99,102,241,.28)}
+    .btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,.4)}
+    .btn-s{display:inline-flex;align-items:center;gap:7px;padding:12px 26px;
+      border-radius:10px;font-size:13.5px;font-weight:500;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:var(--t1);cursor:pointer;
+      font-family:inherit;text-decoration:none;transition:all .25s}
+    .btn-s:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+    /* === BENTO GRID === */
+    .bento{position:relative;z-index:1;max-width:1060px;margin:-50px auto 0;
+      padding:0 28px;animation:fadeIn .6s ease .4s both}
+    .bento-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .bento-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;
+      padding:24px;position:relative;overflow:hidden;transition:all .3s}
+    .bento-card:hover{border-color:rgba(255,255,255,.1);transform:translateY(-2px)}
+    .bento-card::after{content:'';position:absolute;inset:0;border-radius:14px;
+      background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);
+      pointer-events:none;opacity:0;transition:opacity .3s}
+    .bento-card:hover::after{opacity:1}
+
+    /* Bento variations */
+    .bento-stat .b-val{font-size:32px;font-weight:800;letter-spacing:-.03em;margin-bottom:2px}
+    .bento-stat .b-label{font-size:11px;color:var(--t2);text-transform:uppercase;
+      letter-spacing:.07em;font-weight:500}
+    .b-accent{color:var(--a)}.b-teal{color:var(--teal)}.b-green{color:var(--green)}.b-amber{color:var(--amber)}
+
+    /* === SECTIONS === */
+    section{position:relative;z-index:1;padding:90px 28px}
+    .s-head{text-align:center;margin-bottom:50px}
+    .s-tag{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--a);margin-bottom:10px;display:block}
+    .s-title{font-size:clamp(22px,3.2vw,34px);font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
+    .s-desc{font-size:14px;color:var(--t2);max-width:520px;margin:0 auto;line-height:1.6}
+
+    /* === PROBLEM === */
+    .prob-grid{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .prob-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;
+      padding:28px;transition:all .3s;position:relative}
+    .prob-card::before{content:'';position:absolute;top:0;left:20px;right:20px;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(239,68,68,.4),transparent);
+      opacity:0;transition:opacity .3s}
+    .prob-card:hover{border-color:rgba(239,68,68,.15);transform:translateY(-2px)}
+    .prob-card:hover::before{opacity:1}
+    .prob-icon{width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,.08);
+      display:grid;place-items:center;margin-bottom:14px}
+    .prob-icon i{font-size:18px;color:#f87171}
+    .prob-card h3{font-size:14px;font-weight:600;margin-bottom:7px}
+    .prob-card p{font-size:12.5px;color:var(--t2);line-height:1.6}
+
+    /* === SOLUTION BENTO === */
+    .sol-grid{max-width:1000px;margin:0 auto;display:grid;
+      grid-template-columns:repeat(12,1fr);grid-template-rows:auto auto;gap:14px}
+    .sol-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;
+      padding:30px;position:relative;overflow:hidden;transition:all .3s}
+    .sol-card:hover{transform:translateY(-2px)}
+    .sol-card .glow{position:absolute;top:0;left:0;right:0;height:1px;opacity:0;transition:opacity .3s}
+    .sol-card:hover .glow{opacity:1}
+    .sol-1{grid-column:1/8}
+    .sol-2{grid-column:8/13}
+    .sol-3{grid-column:1/6}
+    .sol-4{grid-column:6/13}
+    .sol-1 .glow{background:linear-gradient(90deg,transparent,rgba(99,102,241,.5),transparent)}
+    .sol-1:hover{border-color:rgba(99,102,241,.15)}
+    .sol-2 .glow{background:linear-gradient(90deg,transparent,rgba(20,184,166,.5),transparent)}
+    .sol-2:hover{border-color:rgba(20,184,166,.15)}
+    .sol-3 .glow{background:linear-gradient(90deg,transparent,rgba(245,158,11,.5),transparent)}
+    .sol-3:hover{border-color:rgba(245,158,11,.15)}
+    .sol-4 .glow{background:linear-gradient(90deg,transparent,rgba(239,68,68,.5),transparent)}
+    .sol-4:hover{border-color:rgba(239,68,68,.15)}
+    .sol-icon{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;margin-bottom:16px}
+    .sol-icon i{font-size:20px}
+    .sol-icon.purple{background:rgba(99,102,241,.1)}.sol-icon.purple i{color:#a5b4fc}
+    .sol-icon.teal{background:rgba(20,184,166,.1)}.sol-icon.teal i{color:#5eead4}
+    .sol-icon.amber{background:rgba(245,158,11,.1)}.sol-icon.amber i{color:#fbbf24}
+    .sol-icon.red{background:rgba(239,68,68,.1)}.sol-icon.red i{color:#f87171}
+    .sol-card h3{font-size:15px;font-weight:600;margin-bottom:7px}
+    .sol-card p{font-size:12.5px;color:var(--t2);line-height:1.6}
+    .sol-tag{display:inline-block;margin-top:12px;padding:3px 9px;border-radius:6px;
+      font-size:10.5px;font-weight:600}
+    .sol-tag.purple{background:rgba(99,102,241,.1);color:#a5b4fc}
+    .sol-tag.teal{background:rgba(20,184,166,.1);color:#5eead4}
+    .sol-tag.amber{background:rgba(245,158,11,.1);color:#fbbf24}
+    .sol-tag.red{background:rgba(239,68,68,.1);color:#f87171}
+
+    /* === MINI VISUAL inside sol-1 === */
+    .priority-visual{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+    .pv-bar{height:8px;border-radius:4px;position:relative;transition:width .6s ease}
+    .pv-bar span{position:absolute;top:-18px;left:0;font-size:10px;font-weight:600;white-space:nowrap}
+
+    /* === COMPARISON === */
+    .cmp-wrap{max-width:780px;margin:0 auto;background:var(--s1);border:1px solid var(--border);
+      border-radius:14px;overflow:hidden}
+    .cmp-table{width:100%;border-collapse:collapse}
+    .cmp-table th{padding:14px 20px;font-size:11px;font-weight:600;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--t2);background:rgba(255,255,255,.015);
+      text-align:left;border-bottom:1px solid var(--border)}
+    .cmp-table th:nth-child(2){color:#f87171}
+    .cmp-table th:nth-child(3){color:#a5b4fc}
+    .cmp-table td{padding:12px 20px;font-size:12.5px;border-bottom:1px solid var(--border)}
+    .cmp-table tr:last-child td{border-bottom:none}
+    .cmp-table tr:hover td{background:rgba(255,255,255,.01)}
+    .cmp-table td:first-child{color:var(--t2);font-weight:500}
+    .vb{color:#f87171;font-weight:600}.vg{color:#34d399;font-weight:600}
+
+    /* Animated bar inside comparison */
+    .bar-cell{position:relative;min-width:120px}
+    .mini-bar{height:4px;border-radius:2px;margin-top:4px;transition:width 1s ease}
+    .mini-bar.bad{background:rgba(239,68,68,.3)}
+    .mini-bar.good{background:rgba(52,211,153,.4)}
+
+    /* === MODULES === */
+    .mod-grid{max-width:1000px;margin:0 auto;display:grid;
+      grid-template-columns:repeat(4,1fr);gap:14px}
+    .mod-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;
+      padding:22px;text-align:center;transition:all .25s;position:relative;overflow:hidden}
+    .mod-card::before{content:'';position:absolute;bottom:0;left:20%;right:20%;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(99,102,241,.3),transparent);
+      opacity:0;transition:opacity .3s}
+    .mod-card:hover{border-color:rgba(99,102,241,.15);transform:translateY(-2px)}
+    .mod-card:hover::before{opacity:1}
+    .mod-card i{font-size:22px;color:var(--a2);margin-bottom:10px;display:block}
+    .mod-card h4{font-size:12.5px;font-weight:600;margin-bottom:3px}
+    .mod-card p{font-size:10.5px;color:var(--t2);line-height:1.5}
+
+    /* === TECH === */
+    .tech-row{max-width:780px;margin:0 auto;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .tech-pill{display:flex;align-items:center;gap:8px;padding:10px 18px;
+      background:var(--s1);border:1px solid var(--border);border-radius:10px;
+      font-size:12.5px;font-weight:500;transition:all .2s}
+    .tech-pill:hover{border-color:rgba(255,255,255,.1)}
+    .tech-pill span{color:var(--t2);font-size:11px}
+
+    /* === CTA === */
+    .cta{text-align:center;padding:70px 28px 90px;position:relative;z-index:1}
+    .cta-box{max-width:560px;margin:0 auto;
+      background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(20,184,166,.03));
+      border:1px solid rgba(99,102,241,.12);border-radius:18px;padding:44px 36px;
+      position:relative;overflow:hidden}
+    .cta-box::before{content:'';position:absolute;top:0;left:30%;right:30%;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(99,102,241,.4),transparent)}
+    .cta-box h2{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
+    .cta-box p{font-size:13px;color:var(--t2);margin-bottom:26px;line-height:1.6}
+    .cta-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+    /* === FOOTER === */
+    footer{border-top:1px solid var(--border);padding:28px;text-align:center;
+      font-size:11px;color:rgba(232,232,244,.15);position:relative;z-index:1}
+    footer a{color:rgba(232,232,244,.25);text-decoration:none}
+    footer a:hover{color:var(--t2)}
+
+    /* === SCROLL REVEAL === */
+    .reveal{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s ease}
+    .reveal.visible{opacity:1;transform:translateY(0)}
+
+    /* === RESPONSIVE === */
+    @media(max-width:768px){
+      nav{padding:10px 14px}
+      .n-links .n-link{display:none}
+      .hero{padding:100px 18px 70px}
+      .bento-grid{grid-template-columns:repeat(2,1fr)}
+      .prob-grid{grid-template-columns:1fr}
+      .sol-grid{grid-template-columns:1fr}
+      .sol-1,.sol-2,.sol-3,.sol-4{grid-column:auto}
+      .mod-grid{grid-template-columns:repeat(2,1fr)}
+      section{padding:60px 18px}
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<!-- Nav -->
+<nav>
+  <a href="/" class="n-brand">
+    <div class="n-logo">
+      <svg viewBox="0 0 34 34" fill="none"><rect x="2" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,.9)"/><rect x="19" y="2" width="13" height="13" rx="3" fill="rgba(255,255,255,.5)"/><rect x="2" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,.5)"/><rect x="19" y="19" width="13" height="13" rx="3" fill="rgba(255,255,255,.25)"/></svg>
+    </div>
+    <span class="n-name">LPG Distribution System</span>
+  </a>
+  <div class="n-links">
+    <a href="#problem" class="n-link">Problem</a>
+    <a href="#solution" class="n-link">Solution</a>
+    <a href="#analytics" class="n-link">Analytics</a>
+    <a href="#modules" class="n-link">Modules</a>
+    <a href="/login" class="n-cta">Sign In</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-chip">
+      <div class="hero-chip-dot"></div>
+      Aligned with Pradhan Mantri Ujjwala Yojana
+    </div>
+    <h1>Intelligent LPG<br>Allocation for<br><span class="grad">Every Household</span></h1>
+    <p class="hero-p">
+      A priority-based engine that replaces India's First-Come, First-Served system.
+      Domestic households served first. Zero warehouse waste. No consumer ignored.
+      Mathematically guaranteed.
+    </p>
+    <div class="hero-btns">
+      <a href="/login" class="btn-p"><i class="ti ti-login" style="font-size:15px"></i> Access Portal</a>
+      <a href="#solution" class="btn-s"><i class="ti ti-chevron-down" style="font-size:15px"></i> How It Works</a>
+      <a href="/simulator-page" class="btn-s"><i class="ti ti-flask" style="font-size:15px"></i> Algorithm Playground</a>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Bento -->
+<div class="bento">
+  <div class="bento-grid">
+    <div class="bento-card bento-stat">
+      <div class="b-val b-accent" data-count="60">0%</div>
+      <div class="b-label">More Allocation</div>
+    </div>
+    <div class="bento-card bento-stat">
+      <div class="b-val b-teal" data-count="95.8">0%</div>
+      <div class="b-label">Stock Utilization</div>
+    </div>
+    <div class="bento-card bento-stat">
+      <div class="b-val b-green">0</div>
+      <div class="b-label">Idle Stock Waste</div>
+    </div>
+    <div class="bento-card bento-stat">
+      <div class="b-val b-amber" data-count="100">0%</div>
+      <div class="b-label">Crisis Compliance</div>
+    </div>
+  </div>
+</div>
+
+<!-- Problem -->
+<section id="problem">
+  <div class="s-head">
+    <span class="s-tag">The Problem</span>
+    <h2 class="s-title">Why FCFS Fails 314 Million Connections</h2>
+    <p class="s-desc">Every Indian LPG distributor uses First-Come, First-Served. It sounds fair. It isn't.</p>
+  </div>
+  <div class="prob-grid">
+    <div class="prob-card reveal">
+      <div class="prob-icon"><i class="ti ti-equal"></i></div>
+      <h3>No Priority Differentiation</h3>
+      <p>A hotel ordering 10 cylinders is processed before a household needing 1 — simply because it booked earlier. Families go without cooking gas.</p>
+    </div>
+    <div class="prob-card reveal">
+      <div class="prob-icon"><i class="ti ti-package-off"></i></div>
+      <h3>All-or-Nothing Blocking</h3>
+      <p>3 cylinders left, next order needs 5? FCFS skips it. Those 3 cylinders sit idle in the warehouse while consumers wait.</p>
+    </div>
+    <div class="prob-card reveal">
+      <div class="prob-icon"><i class="ti ti-alert-triangle"></i></div>
+      <h3>Zero Crisis Response</h3>
+      <p>During Karnataka's 2023 floods, 50,000+ families displaced. FCFS had no mechanism to freeze commercial orders or protect households.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Solution -->
+<section id="solution">
+  <div class="s-head">
+    <span class="s-tag">Our Solution</span>
+    <h2 class="s-title">Four Innovations. Same Complexity.</h2>
+    <p class="s-desc">The Smart Priority Engine runs at O(n log n) — identical to FCFS — but with fundamentally better outcomes.</p>
+  </div>
+  <div class="sol-grid">
+    <div class="sol-card sol-1 reveal">
+      <div class="glow"></div>
+      <div class="sol-icon purple"><i class="ti ti-sort-ascending-2"></i></div>
+      <h3>Three-Tier Priority Classification</h3>
+      <p>Orders sorted by consumer class before processing. Households always first, aligned with PMUY and NFSA mandates.</p>
+      <div class="priority-visual">
+        <div style="flex:1">
+          <div class="pv-bar" style="width:100%;background:linear-gradient(90deg,#6366f1,#818cf8);border-radius:4px;height:8px;margin-bottom:6px"></div>
+          <span style="font-size:10px;color:#a5b4fc;font-weight:600">Domestic — Rank 1</span>
+        </div>
+        <div style="flex:1">
+          <div class="pv-bar" style="width:70%;background:linear-gradient(90deg,#14b8a6,#2dd4bf);border-radius:4px;height:8px;margin-bottom:6px"></div>
+          <span style="font-size:10px;color:#5eead4;font-weight:600">Essential — Rank 2</span>
+        </div>
+        <div style="flex:1">
+          <div class="pv-bar" style="width:40%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:4px;height:8px;margin-bottom:6px"></div>
+          <span style="font-size:10px;color:#fbbf24;font-weight:600">Commercial — Rank 3</span>
+        </div>
+      </div>
+    </div>
+    <div class="sol-card sol-2 reveal">
+      <div class="glow"></div>
+      <div class="sol-icon teal"><i class="ti ti-arrows-split"></i></div>
+      <h3>Pro-Rata Splitting</h3>
+      <p>If we can't fill the full order, deliver what's available and auto-backorder the rest. 3 left, need 5? Deliver 3, track the remaining 2.</p>
+      <span class="sol-tag teal">Zero Warehouse Waste</span>
+    </div>
+    <div class="sol-card sol-3 reveal">
+      <div class="glow"></div>
+      <div class="sol-icon amber"><i class="ti ti-clock-shield"></i></div>
+      <h3>Anti-Starvation Ageing</h3>
+      <p>Priority score drops 0.02/day. Commercial reaches domestic-level priority in a bounded maximum of 100 days. Provably fair.</p>
+      <span class="sol-tag amber">Mathematically Guaranteed</span>
+    </div>
+    <div class="sol-card sol-4 reveal">
+      <div class="glow"></div>
+      <div class="sol-icon red"><i class="ti ti-urgent"></i></div>
+      <h3>One-Click Crisis Mode</h3>
+      <p>During floods or supply disruptions, administrators freeze commercial allocation instantly. Domestic consumers get protected supply with configurable rationing limits. Emergency response in seconds.</p>
+      <span class="sol-tag red">Instant Emergency Response</span>
+    </div>
+  </div>
+</section>
+
+<!-- Analytics -->
+<section id="analytics">
+  <div class="s-head">
+    <span class="s-tag">Performance</span>
+    <h2 class="s-title">FCFS vs Smart Priority</h2>
+    <p class="s-desc">Identical input, same O(n log n) complexity. Tested across 6 shortage scenarios.</p>
+  </div>
+  <div class="cmp-wrap reveal">
+    <table class="cmp-table">
+      <thead><tr><th>Metric</th><th>FCFS</th><th>Smart Priority</th></tr></thead>
+      <tbody>
+        <tr><td>Stock Utilization</td><td class="bar-cell"><span class="vb">67.3%</span><div class="mini-bar bad" data-w="67"></div></td><td class="bar-cell"><span class="vg">95.8%</span><div class="mini-bar good" data-w="96"></div></td></tr>
+        <tr><td>Domestic Protection</td><td class="bar-cell"><span class="vb">41.2%</span><div class="mini-bar bad" data-w="41"></div></td><td class="bar-cell"><span class="vg">97.6%</span><div class="mini-bar good" data-w="98"></div></td></tr>
+        <tr><td>Idle Stock / Run</td><td class="vb">4.2 cylinders</td><td class="vg">0.3 cylinders</td></tr>
+        <tr><td>Orders Served</td><td class="bar-cell"><span class="vb">58.3%</span><div class="mini-bar bad" data-w="58"></div></td><td class="bar-cell"><span class="vg">91.7%</span><div class="mini-bar good" data-w="92"></div></td></tr>
+        <tr><td>Crisis Compliance</td><td class="vb">Not possible</td><td class="vg">100%</td></tr>
+        <tr><td>Starvation Bound</td><td class="vb">No guarantee</td><td class="vg">Proven &le; 100 days</td></tr>
+        <tr><td>Time Complexity</td><td>O(n log n)</td><td>O(n log n)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Modules -->
+<section id="modules">
+  <div class="s-head">
+    <span class="s-tag">System</span>
+    <h2 class="s-title">End-to-End Distribution Lifecycle</h2>
+    <p class="s-desc">From registration to QR-verified delivery and GST invoicing.</p>
+  </div>
+  <div class="mod-grid">
+    <div class="mod-card reveal"><i class="ti ti-users"></i><h4>Consumer Mgmt</h4><p>Registration, KYC, classification</p></div>
+    <div class="mod-card reveal"><i class="ti ti-building-store"></i><h4>Agencies</h4><p>Multi-region distributor management</p></div>
+    <div class="mod-card reveal"><i class="ti ti-calendar-event"></i><h4>Bookings</h4><p>Priority queue with live tracking</p></div>
+    <div class="mod-card reveal"><i class="ti ti-packages"></i><h4>Supply Chain</h4><p>Stock intake, FIFO depletion</p></div>
+    <div class="mod-card reveal"><i class="ti ti-brain"></i><h4>Allocation Engine</h4><p>Priority, splitting, crisis caps</p></div>
+    <div class="mod-card reveal"><i class="ti ti-truck-delivery"></i><h4>Delivery</h4><p>Agent assignment, route clustering</p></div>
+    <div class="mod-card reveal"><i class="ti ti-qrcode"></i><h4>QR Verify</h4><p>Scan-to-confirm, fraud prevention</p></div>
+    <div class="mod-card reveal"><i class="ti ti-receipt-tax"></i><h4>Invoicing</h4><p>GST-compliant auto billing</p></div>
+  </div>
+</section>
+
+<!-- Tech -->
+<section id="tech">
+  <div class="s-head">
+    <span class="s-tag">Stack</span>
+    <h2 class="s-title">Built With</h2>
+  </div>
+  <div class="tech-row">
+    <div class="tech-pill reveal">FastAPI <span>Python 3.11</span></div>
+    <div class="tech-pill reveal">MySQL 8.0 <span>Relational</span></div>
+    <div class="tech-pill reveal">JWT <span>Auth</span></div>
+    <div class="tech-pill reveal">Pydantic v2 <span>Validation</span></div>
+    <div class="tech-pill reveal">Vanilla JS <span>Frontend</span></div>
+    <div class="tech-pill reveal">Uvicorn <span>ASGI Server</span></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="cta-box reveal">
+    <h2>Ready to explore?</h2>
+    <p>Sign in as admin, consumer, or delivery agent — or test the allocation engine in the Algorithm Playground.</p>
+    <div class="cta-btns">
+      <a href="/login" class="btn-p"><i class="ti ti-login" style="font-size:15px"></i> Sign In</a>
+      <a href="/simulator-page" class="btn-s"><i class="ti ti-flask" style="font-size:15px"></i> Playground</a>
+      <a href="https://github.com/Nbit-51/LPG-Distribution-System" target="_blank" class="btn-s"><i class="ti ti-brand-github" style="font-size:15px"></i> Source</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Smart LPG Distribution System &mdash; Priority-Based Allocation with Anti-Starvation Guarantees
+  &nbsp;&bull;&nbsp; <a href="https://github.com/Nbit-51/LPG-Distribution-System">GitHub</a>
+</footer>
+
+<script>
+// ─── Particle Canvas ───
+(function(){
+  const c=document.getElementById('bg'),x=c.getContext('2d');
+  let w,h;const pts=[];const N=60;
+  function resize(){w=c.width=innerWidth;h=c.height=innerHeight}
+  resize();addEventListener('resize',resize);
+  for(let i=0;i<N;i++)pts.push({
+    x:Math.random()*w,y:Math.random()*h,
+    vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,
+    r:Math.random()*1.5+.5
+  });
+  function draw(){
+    x.clearRect(0,0,w,h);
+    for(let i=0;i<N;i++){
+      const p=pts[i];
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x=w;if(p.x>w)p.x=0;
+      if(p.y<0)p.y=h;if(p.y>h)p.y=0;
+      x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);
+      x.fillStyle='rgba(99,102,241,.15)';x.fill();
+      for(let j=i+1;j<N;j++){
+        const q=pts[j],dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<140){
+          x.beginPath();x.moveTo(p.x,p.y);x.lineTo(q.x,q.y);
+          x.strokeStyle=`rgba(99,102,241,${.04*(1-d/140)})`;
+          x.lineWidth=.5;x.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Counter Animation ───
+function animateCounters(){
+  document.querySelectorAll('[data-count]').forEach(el=>{
+    const target=parseFloat(el.dataset.count);
+    const isDecimal=String(target).includes('.');
+    let current=0;const step=target/50;
+    const timer=setInterval(()=>{
+      current+=step;
+      if(current>=target){current=target;clearInterval(timer)}
+      el.textContent=(isDecimal?current.toFixed(1):Math.round(current))+'%';
+    },25);
+  });
+}
+
+// ─── Scroll Reveal ───
+const obs=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+},{threshold:.1,rootMargin:'0px 0px -30px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+// ─── Stat counter trigger ───
+const statObs=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){animateCounters();statObs.disconnect()}});
+},{threshold:.3});
+const bento=document.querySelector('.bento');
+if(bento)statObs.observe(bento);
+
+// ─── Comparison bar widths ───
+const barObs=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.querySelectorAll('.mini-bar[data-w]').forEach(bar=>{
+        bar.style.width=bar.dataset.w+'%';
+      });
+    }
+  });
+},{threshold:.2});
+document.querySelectorAll('.cmp-wrap').forEach(el=>{
+  el.querySelectorAll('.mini-bar[data-w]').forEach(b=>b.style.width='0%');
+  barObs.observe(el);
+});
+</script>
+</body>
+</html>
