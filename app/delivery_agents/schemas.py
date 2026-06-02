@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -17,6 +17,17 @@ class DeliveryAgentCreate(BaseModel):
     phone: str = Field(..., max_length=15)
     agency_id: int
     password: str
+
+    @field_validator("full_name")
+    @classmethod
+    def clean_full_name(cls, value: str) -> str:
+        value = " ".join(value.strip().split())
+        if not value:
+            raise ValueError("Delivery agent name is required.")
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ .'-")
+        if not value[0].isalpha() or any(ch not in allowed for ch in value):
+            raise ValueError("Use a clean English name with letters, spaces, dot, apostrophe, or hyphen only.")
+        return value
 
 class DeliveryAgentResponse(BaseModel):
     agent_id: int

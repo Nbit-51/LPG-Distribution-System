@@ -214,13 +214,35 @@ var agentMarker = null;
 var destinationMarker = null;
 var routeLine = null;
 
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function hasBadAgentName(name) {
+  var value = String(name || '').trim();
+  if (!value) return true;
+  if (/agent\s*#?\d+/i.test(value)) return false;
+  return !/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(value);
+}
+
+function cleanAgentName(agent) {
+  var value = String(agent.full_name || '').trim();
+  return hasBadAgentName(value) ? ('Agent #' + agent.agent_id) : value;
+}
+
 async function loadAgents() {
   try {
     if (agenciesCache.length === 0) {
       await loadAgencies();
     }
     
-    var agents = await api.get('/admin/delivery-agents/metrics');
+    var rawAgents = await api.get('/admin/delivery-agents/metrics');
+    var agents = (rawAgents || []).filter(function(a) { return !hasBadAgentName(a.full_name); });
     var tbody = document.getElementById('agents-tbody');
     
     var totalFleet = agents.length;
@@ -256,7 +278,9 @@ async function loadAgents() {
         '<button class="btn btn-sm btn-danger" style="margin-right:6px" onclick="deactivateAgent(' + a.agent_id + ')">Deactivate</button>' : 
         '<span style="color:#64748b;font-size:12px;margin-right:6px">Deactivated</span>';
       
-      var agentJson = JSON.stringify(a).replace(/"/g, '&quot;');
+      var displayName = cleanAgentName(a);
+      var agentForModal = Object.assign({}, a, { full_name: displayName });
+      var agentJson = escapeHtml(JSON.stringify(agentForModal));
       var trackBtn = '<button class="btn btn-sm btn-outline" style="color:var(--accent); border-color:var(--accent); display:inline-flex; align-items:center; gap:4px;" onclick="openAgentTracker(' + agentJson + ')"><i class="ti ti-map-pin"></i> View Tracker</button>';
       
       var starRating = a.average_rating > 0 ? 
@@ -265,9 +289,9 @@ async function loadAgents() {
       
       return '<tr>' +
         '<td>#' + a.agent_id + '</td>' +
-        '<td><strong>' + a.full_name + '</strong><div style="font-size:11px;color:var(--text3)">Joined ' + fmtDate(a.created_at) + '</div></td>' +
-        '<td>' + a.phone + '</td>' +
-        '<td>' + (a.agency_name || ('Agency #' + a.agency_id)) + '</td>' +
+        '<td><strong>' + escapeHtml(displayName) + '</strong><div style="font-size:11px;color:var(--text3)">Joined ' + fmtDate(a.created_at) + '</div></td>' +
+        '<td>' + escapeHtml(a.phone) + '</td>' +
+        '<td>' + escapeHtml(a.agency_name || ('Agency #' + a.agency_id)) + '</td>' +
         '<td>' + starRating + '</td>' +
         '<td>' + statusBadge + '</td>' +
         '<td><strong>' + a.total_deliveries + '</strong> completed</td>' +
@@ -286,7 +310,7 @@ async function loadAgencies() {
     var select = document.getElementById('agent-agency-select');
     if (select) {
       select.innerHTML = agenciesCache.length ? agenciesCache.map(function(a) {
-        return '<option value="' + a.agency_id + '">' + a.agency_name + ' (' + (a.region || 'No Region') + ')</option>';
+        return '<option value="' + a.agency_id + '">' + escapeHtml(a.agency_name) + ' (' + escapeHtml(a.region || 'No Region') + ')</option>';
       }).join('') : '<option value="">No agencies available</option>';
     }
   } catch(e) {
@@ -314,6 +338,11 @@ async function submitAddAgent() {
 
   if (!name || !phone || !agencyId || !password) {
     toast('Please fill out all fields.', 'error');
+    return;
+  }
+
+  if (hasBadAgentName(name)) {
+    toast('Use a clean English name with letters, spaces, dot, apostrophe, or hyphen only.', 'error');
     return;
   }
 
