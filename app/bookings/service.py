@@ -226,12 +226,22 @@ def get_priority_queue(agency_id: int | None = None) -> list:
     return execute_query(f"SELECT * FROM vw_priority_queue {where}", params)
 
 
+def _ensure_rating_columns():
+    cols = execute_query("SHOW COLUMNS FROM bookings")
+    existing = {c["Field"] for c in cols}
+    if "delivery_agent_rating" not in existing:
+        execute_query("ALTER TABLE bookings ADD COLUMN delivery_agent_rating INT DEFAULT NULL", fetch=False)
+    if "delivery_agent_feedback" not in existing:
+        execute_query("ALTER TABLE bookings ADD COLUMN delivery_agent_feedback VARCHAR(255) DEFAULT NULL", fetch=False)
+
+
 def rate_agent(booking_id: int, rating: int, feedback: str | None) -> dict:
     booking = get_booking_by_id(booking_id)
     if not booking:
         raise ValueError(f"Booking {booking_id} not found.")
     if booking.get("delivery_status") != "delivered":
         raise ValueError("Cannot rate delivery partner before the order is delivered.")
+    _ensure_rating_columns()
     execute_query(
         """UPDATE bookings 
            SET delivery_agent_rating = %s, delivery_agent_feedback = %s 

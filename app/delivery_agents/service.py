@@ -263,6 +263,10 @@ def get_delivery_agents_metrics(agency_id: int | None = None) -> list:
         where_clause = "WHERE da.agency_id = %s"
         params = (agency_id,)
 
+    booking_cols = execute_query("SHOW COLUMNS FROM bookings")
+    booking_col_names = {c["Field"] for c in booking_cols}
+    rating_expr = "AVG(b.delivery_agent_rating)" if "delivery_agent_rating" in booking_col_names else "0.0"
+
     query = f"""
         SELECT 
             da.agent_id, 
@@ -273,7 +277,7 @@ def get_delivery_agents_metrics(agency_id: int | None = None) -> list:
             da.created_at,
             ag.agency_name,
             COALESCE(SUM(CASE WHEN b.delivery_status = 'delivered' THEN 1 ELSE 0 END), 0) AS total_deliveries,
-            COALESCE(AVG(b.delivery_agent_rating), 0.0) AS average_rating,
+            COALESCE({rating_expr}, 0.0) AS average_rating,
             COALESCE(SUM(CASE WHEN b.delivery_status IN ('allocated', 'out_for_delivery') THEN 1 ELSE 0 END), 0) AS active_deliveries
         FROM delivery_agents da
         LEFT JOIN bookings b ON da.agent_id = b.agent_id
@@ -293,4 +297,3 @@ def get_delivery_agents_metrics(agency_id: int | None = None) -> list:
         else:
             row["current_status"] = "idle"
     return rows
-
