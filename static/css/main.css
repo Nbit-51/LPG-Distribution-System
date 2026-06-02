@@ -934,3 +934,153 @@ input:focus, select:focus, textarea:focus {
     padding: 24px 20px;
   }
 }
+
+/* -- DYNAMIC CURSOR EFFECTS & AMBIENT GLOWS -- */
+.cursor-glow {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  z-index: 9999;
+  animation: glowFade 0.8s cubic-bezier(0.1, 1, 0.3, 1) forwards;
+}
+
+@keyframes glowFade {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+}
+
+/* Ambient Background Blur Blobs */
+.ambient-glow-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: -2;
+  overflow: hidden;
+  opacity: 0.65;
+}
+
+.ambient-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(140px);
+  mix-blend-mode: screen;
+  animation: floatBlob 25s infinite alternate ease-in-out;
+}
+
+.blob-indigo {
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  top: -10%;
+  left: -5%;
+}
+
+.blob-teal {
+  width: 45vw;
+  height: 45vw;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.1) 0%, transparent 70%);
+  bottom: -10%;
+  right: -5%;
+  animation-delay: -6s;
+}
+
+.blob-purple {
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 70%);
+  top: 35%;
+  left: 45%;
+  animation-delay: -12s;
+}
+
+@keyframes floatBlob {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(6%, 8%) scale(1.1) rotate(180deg); }
+  100% { transform: translate(-4%, -6%) scale(0.9) rotate(360deg); }
+}
+
+/* Spotlight Card & Button Glow */
+.card, .stat-card, .consumer-card, .modal-content, .btn-primary, .btn-secondary {
+  position: relative;
+}
+
+.card::after, .stat-card::after, .consumer-card::after, .modal-content::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(400px circle at var(--mx, 0px) var(--my, 0px), rgba(99, 102, 241, 0.04), transparent 75%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  border-radius: inherit;
+}
+
+/* Specific glows for teal elements */
+.stat-card.success::after, .consumer-card::after {
+  background: radial-gradient(400px circle at var(--mx, 0px) var(--my, 0px), rgba(20, 184, 166, 0.04), transparent 75%);
+}
+
+.card:hover::after, .stat-card:hover::after, .consumer-card:hover::after, .modal-content:hover::after {
+  opacity: 1;
+}
+
+/* Premium Card Border Glow Trail */
+.card, .stat-card, .consumer-card {
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+
+.card:hover, .consumer-card:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 25px rgba(99, 102, 241, 0.08);
+}
+
+.stat-card:hover {
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(99, 102, 241, 0.08);
+}
+
+.stat-card.success:hover {
+  border-left-color: var(--neon-teal);
+  border-color: rgba(20, 184, 166, 0.2);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(20, 184, 166, 0.08);
+}
+
+/* Neon Top Accent Line for Cards */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.25), transparent);
+  z-index: 2;
+}
+
+.stat-card.success::before {
+  background: linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.25), transparent);
+}
+
+/* Active Sidebar Navigation Item Glow */
+.nav-item.active {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.18), inset 0 0 12px rgba(99, 102, 241, 0.1);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+}
+
+/* Headings Hover Glow */
+.page-title {
+  transition: text-shadow 0.3s ease;
+}
+.page-title:hover {
+  text-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+}
+
+/* Form focus glows */
+input:focus, select:focus, textarea:focus {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 16px rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.6);
+}

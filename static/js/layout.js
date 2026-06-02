@@ -180,3 +180,86 @@ function emptyRow(msg, cols = 8) {
     </td>
   </tr>`;
 }
+
+// ── Interactive Cursor Glow & Spotlight Effects ───────────────────────────────────────────────────
+(function initUIEnhancements() {
+  if (typeof window === 'undefined' || !document) return;
+
+  // 1. Create Ambient Background Glow Blobs
+  const ambientContainer = document.createElement('div');
+  ambientContainer.className = 'ambient-glow-container';
+  ambientContainer.innerHTML = `
+    <div class="ambient-blob blob-indigo"></div>
+    <div class="ambient-blob blob-teal"></div>
+    <div class="ambient-blob blob-purple"></div>
+  `;
+  document.body.prepend(ambientContainer);
+
+  // 2. Cursor Trail & Click Sparks
+  const colors = [
+    'rgba(99, 102, 241, 0.8)', // indigo
+    'rgba(20, 184, 166, 0.8)', // teal
+    'rgba(245, 158, 11, 0.8)', // amber
+    'rgba(239, 68, 68, 0.8)',  // red
+    'rgba(16, 185, 129, 0.8)', // green
+    'rgba(168, 85, 247, 0.8)'  // purple
+  ];
+  
+  let lastSpawn = 0;
+  
+  function createGlow(x, y, isClick = false) {
+    const el = document.createElement('div');
+    el.className = 'cursor-glow';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    el.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
+    
+    if (isClick) {
+      el.style.width = '45px';
+      el.style.height = '45px';
+      el.style.animationDuration = '0.6s';
+      el.style.boxShadow = `0 0 25px ${color}`;
+    } else {
+      el.style.boxShadow = `0 0 8px ${color}`;
+    }
+    
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+
+  // 3. Card Spotlight Hover Effect (delegated to be super efficient)
+  document.addEventListener('mousemove', (e) => {
+    const now = performance.now();
+    // Cursor trail spawn rate check
+    if (now - lastSpawn > 55) {
+      createGlow(e.pageX, e.pageY);
+      lastSpawn = now;
+    }
+
+    // Find if we are hovering over a card/interactive container
+    const card = e.target.closest('.card, .stat-card, .consumer-card, .modal-content, .sidebar, .btn');
+    if (card) {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.setProperty('--mx', `${x}px`);
+      card.style.setProperty('--my', `${y}px`);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    createGlow(e.pageX, e.pageY, true);
+    for (let i = 1; i <= 4; i++) {
+       setTimeout(() => {
+         createGlow(
+           e.pageX + (Math.random() - 0.5) * 40, 
+           e.pageY + (Math.random() - 0.5) * 40, 
+           true
+         );
+       }, i * 35);
+    }
+  });
+})();
+
