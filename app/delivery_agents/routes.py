@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Query
 from typing import List, Optional
 from app.delivery_agents import service, schemas
 from app.auth.service import get_current_agent, get_current_consumer, get_current_admin
@@ -147,6 +147,15 @@ def admin_list_agents(agency_id: Optional[int] = None, current_admin: dict = Dep
     except Exception as e:
         raise HTTPException(500, f"Database error listing agents: {e}")
 
+
+@router.get("/admin/delivery-agents/metrics")
+def admin_delivery_agents_metrics(agency_id: Optional[int] = None, current_admin: dict = Depends(get_current_admin)):
+    """Admin-only: Get performance and real-time active tracking metrics for delivery agents."""
+    try:
+        return service.get_delivery_agents_metrics(agency_id)
+    except Exception as e:
+        raise HTTPException(500, f"Database error fetching agent metrics: {e}")
+
 @router.delete("/admin/delivery-agents/{agent_id}")
 def admin_deactivate_agent(agent_id: int, current_admin: dict = Depends(get_current_admin)):
     """Admin-only: Deactivate a delivery agent's account."""
@@ -195,4 +204,86 @@ def get_earnings_ledger(current_agent: dict = Depends(get_current_agent)):
         return service.get_agent_earnings(current_agent["agent_id"])
     except Exception as e:
         raise HTTPException(500, f"Error fetching earnings details: {e}")
+
+@router.get("/consumer/bookings/{booking_id}/tracking")
+def get_consumer_booking_tracking(
+    booking_id: int, 
+    lat: float = Query(...), 
+    lng: float = Query(...), 
+    current_consumer: dict = Depends(get_current_consumer)
+):
+    """
+    Retrieve real-time tracking position of the delivery agent assigned to a consumer's active booking.
+    Accepts customer current coordinates to calculate linear path projection.
+    """
+    from app.database import execute_query
+    from datetime import datetime
+    import math
+
+    # Check booking belongs to the authenticated consumer and fetch agency / agent details
+    rows = execute_query(
+        """SELECT b.booking_id, b.status, b.delivery_status, b.updated_at, b.agent_id,
+                  a.latitude AS agency_lat, a.longitude AS agency_lng,
+                  da.full_name AS agent_name, da.phone AS agent_phone
+           FROM bookings b
+           JOIN agencies a ON b.agency_id = a.agency_id
+           LEFT JOIN delivery_agents da ON b.agent_id = da.agent_id
+           WHERE b.booking_id = %s AND b.consumer_id = %s""",
+        (booking_id, current_consumer["consumer_id"])
+    )
+    if not rows:
+        raise HTTPException(404, f"Active booking {booking_id} not found.")
+    
+    b = rows[0]
+    if not b["agent_id"]:
+        return {
+            "active": False,
+            "message": "Delivery agent has not been assigned to this booking yet."
+        }
+
+    # Tracking is only active for allocated / out_for_delivery / pending states
+    # If cancelled or delivered, tracking is inactive.
+    if b["delivery_status"] not in ("allocated", "out_for_delivery", "pending", "delayed"):
+        return {
+            "active": False,
+            "message": f"Tracking is inactive for booking status: {b['delivery_status'] or b['status']}."
+        }
+
+    # Simulate dynamic position between agency and customer coords
+    agency_lat = float(b["agency_lat"]) if b["agency_lat"] is not None else 12.9716
+    agency_lng = float(b["agency_lng"]) if b["agency_lng"] is not None else 77.5946
+    
+    # Calculate time progress (ratio)
+    updated_at = b["updated_at"]
+    if not updated_at:
+        updated_at = datetime.now()
+        
+    seconds_elapsed = (datetime.now() - updated_at).total_seconds()
+    # 5 minute simulated delivery trip (300 seconds)
+    total_trip_seconds = 300.0
+    ratio = min(1.0, max(0.0, seconds_elapsed / total_trip_seconds))
+    
+    # Linear interpolation
+    agent_lat = agency_lat + (lat - agency_lat) * ratio
+    agent_lng = agency_lng + (lng - agency_lng) * ratio
+    
+    # Add a slight road navigation wave pattern
+    if ratio > 0.0 and ratio < 1.0:
+        wiggle = 0.0003 * math.sin(ratio * math.pi * 6)
+        agent_lat += wiggle
+        agent_lng += wiggle
+        
+    return {
+        "active": True,
+        "booking_id": booking_id,
+        "delivery_status": b["delivery_status"] or b["status"],
+        "agent": {
+            "name": b["agent_name"] or "Delivery Partner",
+            "phone": b["agent_phone"] or "--"
+        },
+        "origin": {"lat": agency_lat, "lng": agency_lng},
+        "destination": {"lat": lat, "lng": lng},
+        "agent_location": {"lat": agent_lat, "lng": agent_lng},
+        "progress": ratio * 100.0
+    }
 

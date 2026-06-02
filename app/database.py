@@ -47,7 +47,9 @@ def execute_query(query, params=(), fetch=True):
         cursor = conn.cursor(dictionary=True)
         cursor.execute(query, params)
         if fetch:
-            return cursor.fetchall()
+            res = cursor.fetchall()
+            conn.commit()
+            return res
         else:
             conn.commit()
             return cursor.lastrowid

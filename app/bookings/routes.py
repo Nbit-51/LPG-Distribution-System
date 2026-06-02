@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from app.bookings.schemas import (
     BookingCreate, BookingCancel, BookingStatusUpdate,
     BookingResponse, BookingListResponse, BookingStatus,
+    BookingRateAgent,
 )
 from app.bookings import service
+from app.auth.service import get_current_consumer
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -73,3 +75,20 @@ def consumer_history(
     page_size: int = Query(20, ge=1, le=100),
 ):
     return service.list_bookings(page=page, page_size=page_size, consumer_id=consumer_id)
+
+
+@router.post("/{booking_id}/rate-agent", response_model=BookingResponse)
+def rate_agent(
+    booking_id: int,
+    body: BookingRateAgent,
+    current_consumer=Depends(get_current_consumer)
+):
+    record = service.get_booking_by_id(booking_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Booking {booking_id} not found.")
+    if record["consumer_id"] != current_consumer["consumer_id"]:
+        raise HTTPException(status_code=403, detail="You are not authorized to rate this agent.")
+    try:
+        return service.rate_agent(booking_id, body.rating, body.feedback)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

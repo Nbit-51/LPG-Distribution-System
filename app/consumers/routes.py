@@ -5,7 +5,7 @@ from typing import Optional, List
 from app.consumers.schemas import (
     ConsumerCreate, ConsumerUpdate,
     ConsumerResponse, ConsumerListResponse, MessageResponse,
-    ConsumerType, KYCSubmit,
+    ConsumerType, KYCSubmit, WalletAddFunds, WalletVerifyPayment
 )
 from app.consumers import service
 from app.auth.service import get_current_consumer
@@ -73,5 +73,35 @@ def deactivate_consumer(consumer_id: int):
     try:
         service.deactivate_consumer(consumer_id)
         return {"message": "Consumer deactivated.", "consumer_id": consumer_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/wallet/me")
+def get_my_wallet(current_consumer=Depends(get_current_consumer)):
+    try:
+        return service.get_wallet(current_consumer["consumer_id"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/wallet/add-funds")
+def add_wallet_funds_order(body: WalletAddFunds, current_consumer=Depends(get_current_consumer)):
+    import random
+    mock_order_id = f"order_demo_{random.randint(100000, 999999)}"
+    return {
+        "order_id": mock_order_id,
+        "amount": body.amount,
+        "currency": "INR",
+        "key": "rzp_test_mockkey"
+    }
+
+@router.post("/wallet/verify-payment")
+def verify_wallet_payment(body: WalletVerifyPayment, current_consumer=Depends(get_current_consumer)):
+    try:
+        updated_wallet = service.add_wallet_funds(
+            current_consumer["consumer_id"],
+            body.amount,
+            f"Wallet Topup via Razorpay (Ref: {body.razorpay_payment_id})"
+        )
+        return {"status": "success", "wallet": updated_wallet}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

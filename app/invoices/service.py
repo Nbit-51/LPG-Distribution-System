@@ -1,11 +1,19 @@
 from app.database import execute_query
 
 def create_invoice(booking_id: int, consumer_id: int, agency_id: int, cylinders: int, payment_method: str = "COD") -> int:
+    # Fetch priority surcharge from the booking
+    booking_rows = execute_query(
+        "SELECT priority_delivery_fee FROM bookings WHERE booking_id = %s", (booking_id,)
+    )
+    priority_delivery_fee = 0.00
+    if booking_rows and booking_rows[0]["priority_delivery_fee"]:
+        priority_delivery_fee = float(booking_rows[0]["priority_delivery_fee"])
+
     base_rate = 850.00
     amount = base_rate * cylinders
     cgst = amount * 0.09
     sgst = amount * 0.09
-    delivery_fee = 50.00
+    delivery_fee = 50.00 + priority_delivery_fee
     total_amount = amount + cgst + sgst + delivery_fee
     
     # Insert temporarily to get invoice_id

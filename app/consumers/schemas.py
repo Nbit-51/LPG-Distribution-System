@@ -58,3 +58,12 @@ class KYCSubmit(BaseModel):
 class KYCUpdate(BaseModel):
     status: str
 
+class WalletAddFunds(BaseModel):
+    amount: float
+
+class WalletVerifyPayment(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    amount: float
+

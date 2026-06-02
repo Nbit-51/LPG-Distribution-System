@@ -96,10 +96,37 @@ def create_booking(data: BookingCreate) -> dict:
     if dupe:
         raise ValueError("Consumer already has a pending booking.")
 
+    # Calculate delivery tier surcharge
+    delivery_tier = getattr(data, "delivery_tier", "standard") or "standard"
+    priority_delivery_fee = 0.00
+    if delivery_tier == "express":
+        crisis_active = execute_query(
+            "SELECT COUNT(*) AS active FROM crisis_events WHERE is_active = TRUE AND agency_id = %s",
+            (data.agency_id,)
+        )
+        is_crisis = crisis_active and crisis_active[0]["active"] > 0
+        priority_delivery_fee = 200.00 if is_crisis else 100.00
+
+    # Check wallet balance if payment method is wallet
+    is_wallet = getattr(data, "payment_method", "COD") == "wallet"
+    total_amount = 0.0
+    if is_wallet:
+        base_rate = 850.00
+        amount_val = base_rate * data.cylinders_requested
+        cgst = amount_val * 0.09
+        sgst = amount_val * 0.09
+        delivery_fee = 50.00 + priority_delivery_fee
+        total_amount = amount_val + cgst + sgst + delivery_fee
+        
+        from app.consumers.service import get_wallet
+        wallet = get_wallet(data.consumer_id)
+        if wallet["balance"] < total_amount:
+            raise ValueError(f"Insufficient wallet balance. Total required: Rs. {total_amount:.2f}, available: Rs. {wallet['balance']:.2f}")
+
     booking_id = execute_query(
-        """INSERT INTO bookings (consumer_id, agency_id, cylinders_requested, booking_date, status)
-           VALUES (%s, %s, %s, %s, 'pending')""",
-        (data.consumer_id, data.agency_id, data.cylinders_requested, data.booking_date),
+        """INSERT INTO bookings (consumer_id, agency_id, cylinders_requested, booking_date, status, delivery_tier, priority_delivery_fee)
+           VALUES (%s, %s, %s, %s, 'pending', %s, %s)""",
+        (data.consumer_id, data.agency_id, data.cylinders_requested, data.booking_date, delivery_tier, priority_delivery_fee),
         fetch=False,
     )
 
@@ -109,8 +136,18 @@ def create_booking(data: BookingCreate) -> dict:
         booking_id=booking_id,
         consumer_id=data.consumer_id,
         agency_id=data.agency_id,
-        cylinders=data.cylinders_requested
+        cylinders=data.cylinders_requested,
+        payment_method="wallet" if is_wallet else "COD"
     )
+
+    # Deduct wallet funds and mark invoice as paid
+    if is_wallet:
+        from app.consumers.service import deduct_wallet_funds
+        deduct_wallet_funds(data.consumer_id, total_amount, f"Payment for LPG Booking #{booking_id}")
+        execute_query(
+            "UPDATE invoices SET payment_status = 'paid' WHERE booking_id = %s",
+            (booking_id,), fetch=False
+        )
 
     return get_booking_by_id(booking_id)
 
@@ -187,3 +224,19 @@ def get_priority_queue(agency_id: int | None = None) -> list:
     where  = "WHERE agency_id = %s" if agency_id else ""
     params = (agency_id,) if agency_id else ()
     return execute_query(f"SELECT * FROM vw_priority_queue {where}", params)
+
+
+def rate_agent(booking_id: int, rating: int, feedback: str | None) -> dict:
+    booking = get_booking_by_id(booking_id)
+    if not booking:
+        raise ValueError(f"Booking {booking_id} not found.")
+    if booking.get("delivery_status") != "delivered":
+        raise ValueError("Cannot rate delivery partner before the order is delivered.")
+    execute_query(
+        """UPDATE bookings 
+           SET delivery_agent_rating = %s, delivery_agent_feedback = %s 
+           WHERE booking_id = %s""",
+        (rating, feedback, booking_id),
+        fetch=False,
+    )
+    return get_booking_by_id(booking_id)

@@ -255,3 +255,42 @@ def get_agent_earnings(agent_id: int) -> dict:
         "history": completed_orders
     }
 
+
+def get_delivery_agents_metrics(agency_id: int | None = None) -> list:
+    where_clause = ""
+    params = ()
+    if agency_id:
+        where_clause = "WHERE da.agency_id = %s"
+        params = (agency_id,)
+
+    query = f"""
+        SELECT 
+            da.agent_id, 
+            da.full_name, 
+            da.phone, 
+            da.agency_id, 
+            da.is_active, 
+            da.created_at,
+            ag.agency_name,
+            COALESCE(SUM(CASE WHEN b.delivery_status = 'delivered' THEN 1 ELSE 0 END), 0) AS total_deliveries,
+            COALESCE(AVG(b.delivery_agent_rating), 0.0) AS average_rating,
+            COALESCE(SUM(CASE WHEN b.delivery_status IN ('allocated', 'out_for_delivery') THEN 1 ELSE 0 END), 0) AS active_deliveries
+        FROM delivery_agents da
+        LEFT JOIN bookings b ON da.agent_id = b.agent_id
+        LEFT JOIN agencies ag ON da.agency_id = ag.agency_id
+        {where_clause}
+        GROUP BY da.agent_id, da.full_name, da.phone, da.agency_id, da.is_active, da.created_at, ag.agency_name
+    """
+    rows = execute_query(query, params)
+    for row in rows:
+        row["average_rating"] = float(row["average_rating"])
+        row["total_deliveries"] = int(row["total_deliveries"])
+        row["active_deliveries"] = int(row["active_deliveries"])
+        if not row["is_active"]:
+            row["current_status"] = "inactive"
+        elif row["active_deliveries"] > 0:
+            row["current_status"] = "active_delivery"
+        else:
+            row["current_status"] = "idle"
+    return rows
+

@@ -83,3 +83,62 @@ def update_kyc_status(consumer_id: int, status: str):
     )
     return get_consumer_by_id(consumer_id)
 
+def get_wallet(consumer_id: int) -> dict:
+    rows = execute_query(
+        "SELECT wallet_balance FROM consumers WHERE consumer_id = %s",
+        (consumer_id,)
+    )
+    balance = float(rows[0]["wallet_balance"]) if rows and rows[0]["wallet_balance"] is not None else 0.0
+    transactions = execute_query(
+        """SELECT transaction_id, amount, transaction_type, description, created_at 
+           FROM wallet_transactions 
+           WHERE consumer_id = %s 
+           ORDER BY created_at DESC""",
+        (consumer_id,)
+    )
+    tx_list = []
+    for tx in transactions:
+        tx_list.append({
+            "transaction_id": tx["transaction_id"],
+            "amount": float(tx["amount"]),
+            "transaction_type": tx["transaction_type"],
+            "description": tx["description"],
+            "created_at": tx["created_at"].isoformat() if tx["created_at"] else None
+        })
+    return {"balance": balance, "transactions": tx_list}
+
+def add_wallet_funds(consumer_id: int, amount: float, description: str) -> dict:
+    if amount <= 0:
+        raise ValueError("Amount must be greater than zero.")
+    execute_query(
+        """INSERT INTO wallet_transactions (consumer_id, amount, transaction_type, description) 
+           VALUES (%s, %s, 'credit', %s)""",
+        (consumer_id, amount, description),
+        fetch=False
+    )
+    execute_query(
+        "UPDATE consumers SET wallet_balance = wallet_balance + %s WHERE consumer_id = %s",
+        (amount, consumer_id),
+        fetch=False
+    )
+    return get_wallet(consumer_id)
+
+def deduct_wallet_funds(consumer_id: int, amount: float, description: str):
+    if amount <= 0:
+        raise ValueError("Amount must be greater than zero.")
+    wallet = get_wallet(consumer_id)
+    if wallet["balance"] < amount:
+        raise ValueError("Insufficient wallet balance.")
+    execute_query(
+        """INSERT INTO wallet_transactions (consumer_id, amount, transaction_type, description) 
+           VALUES (%s, %s, 'debit', %s)""",
+        (consumer_id, amount, description),
+        fetch=False
+    )
+    execute_query(
+        "UPDATE consumers SET wallet_balance = wallet_balance - %s WHERE consumer_id = %s",
+        (amount, consumer_id),
+        fetch=False
+    )
+    return get_wallet(consumer_id)
+

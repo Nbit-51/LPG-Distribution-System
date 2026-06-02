@@ -5,6 +5,8 @@
 <title>Delivery Agents - LPG System</title>
 <link rel="stylesheet" href="/static/css/main.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 /* Extending main.css to support modal styling properly */
 .modal-overlay {
@@ -59,6 +61,31 @@
         <button class="btn btn-primary" onclick="openAddAgentModal()"><i class="ti ti-user-plus"></i> Add Agent</button>
       </div>
     </div>
+
+    <!-- Fleet statistics widgets -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:20px;">
+       <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:18px;">
+          <div>
+             <div style="font-size:24px; font-weight:700; color:var(--text)" id="stat-total-fleet">0</div>
+             <div style="font-size:12px; color:var(--text3); margin-top:2px;">Total Fleet Size</div>
+          </div>
+          <span style="font-size:28px; opacity:0.8"><i class="ti ti-truck" style="color:var(--accent)"></i></span>
+       </div>
+       <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:18px;">
+          <div>
+             <div style="font-size:24px; font-weight:700; color:#fbbf24" id="stat-avg-rating">0.0 ★</div>
+             <div style="font-size:12px; color:var(--text3); margin-top:2px;">Average Fleet Rating</div>
+          </div>
+          <span style="font-size:28px; opacity:0.8"><i class="ti ti-star" style="color:#fbbf24"></i></span>
+       </div>
+       <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:18px;">
+          <div>
+             <div style="font-size:24px; font-weight:700; color:#10b981" id="stat-active-deliveries">0</div>
+             <div style="font-size:12px; color:var(--text3); margin-top:2px;">Active Deliveries</div>
+          </div>
+          <span style="font-size:28px; opacity:0.8"><i class="ti ti-bolt" style="color:#10b981"></i></span>
+       </div>
+    </div>
     
     <div class="card">
       <div class="table-wrap">
@@ -68,14 +95,15 @@
               <th>ID</th>
               <th>Name</th>
               <th>Phone</th>
-              <th>Agency ID</th>
+              <th>Agency</th>
+              <th>Avg Rating</th>
               <th>Status</th>
-              <th>Created At</th>
+              <th>Deliveries</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="agents-tbody">
-            <tr><td colspan="7" class="empty-state"><span class="spinner"></span> Loading agents...</td></tr>
+            <tr><td colspan="8" class="empty-state"><span class="spinner"></span> Loading agents...</td></tr>
           </tbody>
         </table>
       </div>
@@ -117,6 +145,60 @@
   </div>
 </div>
 
+<!-- AGENT TRACKING & PROFILE MODAL -->
+<div class="modal-overlay" id="tracker-modal">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <span style="font-weight:600" id="tracker-modal-title">Agent Profile & Live Tracking</span>
+      <button onclick="closeAgentTracker()" style="background:none;border:none;color:rgba(221,221,240,0.5);font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" style="padding: 16px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+         <div>
+            <div style="font-size:11px; color:var(--text3); text-transform:uppercase;">Agent Name</div>
+            <div style="font-size:14px; font-weight:600; color:var(--text)" id="track-agent-name">--</div>
+         </div>
+         <div>
+            <div style="font-size:11px; color:var(--text3); text-transform:uppercase;">Phone</div>
+            <div style="font-size:14px; font-weight:600; color:var(--text)" id="track-agent-phone">--</div>
+         </div>
+         <div>
+            <div style="font-size:11px; color:var(--text3); text-transform:uppercase;">Assigned Agency</div>
+            <div style="font-size:14px; font-weight:600; color:var(--text)" id="track-agent-agency">--</div>
+         </div>
+         <div>
+            <div style="font-size:11px; color:var(--text3); text-transform:uppercase;">Status</div>
+            <div id="track-agent-status">--</div>
+         </div>
+      </div>
+      
+      <!-- Live Map container -->
+      <div class="form-group">
+         <label>Live Tracking Map</label>
+         <div id="agent-leaflet-map" style="height:220px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); background:#0c0e18; overflow:hidden; position:relative;"></div>
+      </div>
+      
+      <!-- Performance Summary -->
+      <div style="margin-top:14px;">
+         <label style="display: block; font-size: 11px; font-weight: 600; color: rgba(221,221,240,0.4); margin-bottom: 6px; text-transform: uppercase;">Performance & Reviews</label>
+         <div style="display:flex; gap:10px;">
+            <div style="flex:1; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; text-align:center; border:1px solid rgba(255,255,255,0.04)">
+               <div style="font-size:16px; font-weight:700; color:var(--text)" id="track-agent-total-jobs">0</div>
+               <div style="font-size:10px; color:var(--text3)">Total Jobs</div>
+            </div>
+            <div style="flex:1; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; text-align:center; border:1px solid rgba(255,255,255,0.04)">
+               <div style="font-size:16px; font-weight:700; color:#fbbf24" id="track-agent-rating">0.0 ★</div>
+               <div style="font-size:10px; color:var(--text3)">Average Star</div>
+            </div>
+         </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:10px 16px 16px;">
+      <button class="btn btn-outline" style="width:100%" onclick="closeAgentTracker()">Close Profile</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script src="/static/js/utils.js"></script>
@@ -126,28 +208,70 @@ requireAuth();
 renderSidebar('agents');
 
 var agenciesCache = [];
+var trackingMap = null;
+var trackingInterval = null;
+var agentMarker = null;
+var destinationMarker = null;
+var routeLine = null;
 
 async function loadAgents() {
   try {
-    var agents = await api.get('/admin/delivery-agents');
+    if (agenciesCache.length === 0) {
+      await loadAgencies();
+    }
+    
+    var agents = await api.get('/admin/delivery-agents/metrics');
     var tbody = document.getElementById('agents-tbody');
+    
+    var totalFleet = agents.length;
+    var totalRating = 0;
+    var agentsWithRatings = 0;
+    var activeDeliveries = 0;
+    
+    agents.forEach(function(a) {
+      if (a.average_rating > 0) {
+        totalRating += a.average_rating;
+        agentsWithRatings++;
+      }
+      activeDeliveries += a.active_deliveries;
+    });
+    
+    var avgRating = agentsWithRatings > 0 ? (totalRating / agentsWithRatings).toFixed(1) : '0.0';
+    
+    document.getElementById('stat-total-fleet').textContent = totalFleet;
+    document.getElementById('stat-avg-rating').textContent = avgRating + ' ★';
+    document.getElementById('stat-active-deliveries').textContent = activeDeliveries;
+    
     tbody.innerHTML = agents.length ? agents.map(function(a) {
-      var statusBadge = a.is_active ? 
-        '<span class="badge badge-active">Active</span>' : 
-        '<span class="badge badge-inactive">Inactive</span>';
+      var statusBadge = '';
+      if (a.current_status === 'active_delivery') {
+         statusBadge = '<span class="badge" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#34d399; font-weight:600; text-transform:uppercase; font-size:11px; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;"><span style="width:6px; height:6px; background:#10b981; border-radius:50%; display:inline-block; box-shadow:0 0 8px #10b981"></span>Out for Delivery</span>';
+      } else if (a.current_status === 'idle') {
+         statusBadge = '<span class="badge" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#818cf8; font-weight:600; text-transform:uppercase; font-size:11px; padding:4px 8px; border-radius:4px;">Idle / Available</span>';
+      } else {
+         statusBadge = '<span class="badge" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; font-weight:600; text-transform:uppercase; font-size:11px; padding:4px 8px; border-radius:4px;">Deactivated</span>';
+      }
       
       var deactBtn = a.is_active ? 
-        '<button class="btn btn-sm btn-danger" onclick="deactivateAgent(' + a.agent_id + ')">Deactivate</button>' : 
-        '<span style="color:#64748b;font-size:12px">Deactivated</span>';
+        '<button class="btn btn-sm btn-danger" style="margin-right:6px" onclick="deactivateAgent(' + a.agent_id + ')">Deactivate</button>' : 
+        '<span style="color:#64748b;font-size:12px;margin-right:6px">Deactivated</span>';
+      
+      var agentJson = JSON.stringify(a).replace(/"/g, '&quot;');
+      var trackBtn = '<button class="btn btn-sm btn-outline" style="color:var(--accent); border-color:var(--accent); display:inline-flex; align-items:center; gap:4px;" onclick="openAgentTracker(' + agentJson + ')"><i class="ti ti-map-pin"></i> View Tracker</button>';
+      
+      var starRating = a.average_rating > 0 ? 
+        '<span style="color:#fbbf24; font-weight:600;">' + a.average_rating.toFixed(1) + ' ★</span>' : 
+        '<span style="color:var(--text3)">--</span>';
       
       return '<tr>' +
         '<td>#' + a.agent_id + '</td>' +
-        '<td><strong>' + a.full_name + '</strong></td>' +
+        '<td><strong>' + a.full_name + '</strong><div style="font-size:11px;color:var(--text3)">Joined ' + fmtDate(a.created_at) + '</div></td>' +
         '<td>' + a.phone + '</td>' +
-        '<td>Agency #' + a.agency_id + '</td>' +
+        '<td>' + (a.agency_name || ('Agency #' + a.agency_id)) + '</td>' +
+        '<td>' + starRating + '</td>' +
         '<td>' + statusBadge + '</td>' +
-        '<td>' + fmtDate(a.created_at) + '</td>' +
-        '<td>' + deactBtn + '</td>' +
+        '<td><strong>' + a.total_deliveries + '</strong> completed</td>' +
+        '<td><div style="display:flex; align-items:center">' + deactBtn + trackBtn + '</div></td>' +
       '</tr>';
     }).join('') : emptyRow('No delivery agents registered.');
   } catch(e) {
@@ -160,9 +284,11 @@ async function loadAgencies() {
     var res = await api.get('/agencies/?page_size=100');
     agenciesCache = res.results || res.agencies || res || [];
     var select = document.getElementById('agent-agency-select');
-    select.innerHTML = agenciesCache.length ? agenciesCache.map(function(a) {
-      return '<option value="' + a.agency_id + '">' + a.agency_name + ' (' + (a.region || 'No Region') + ')</option>';
-    }).join('') : '<option value="">No agencies available</option>';
+    if (select) {
+      select.innerHTML = agenciesCache.length ? agenciesCache.map(function(a) {
+        return '<option value="' + a.agency_id + '">' + a.agency_name + ' (' + (a.region || 'No Region') + ')</option>';
+      }).join('') : '<option value="">No agencies available</option>';
+    }
   } catch(e) {
     console.error('Error loading agencies: ' + e.message);
   }
@@ -175,7 +301,6 @@ function openAddAgentModal() {
 
 function closeAddAgentModal() {
   document.getElementById('add-agent-modal').classList.remove('open');
-  // Reset inputs
   document.getElementById('agent-name').value = '';
   document.getElementById('agent-phone').value = '';
   document.getElementById('agent-password').value = '';
@@ -223,7 +348,118 @@ async function deactivateAgent(agentId) {
   }
 }
 
-// Load initially
+function openAgentTracker(agent) {
+  document.getElementById('track-agent-name').textContent = agent.full_name;
+  document.getElementById('track-agent-phone').textContent = agent.phone;
+  document.getElementById('track-agent-agency').textContent = agent.agency_name || ('Agency #' + agent.agency_id);
+  document.getElementById('track-agent-total-jobs').textContent = agent.total_deliveries;
+  document.getElementById('track-agent-rating').textContent = agent.average_rating > 0 ? (agent.average_rating.toFixed(1) + ' ★') : '0.0 ★';
+  
+  var statusBadge = '';
+  if (agent.current_status === 'active_delivery') {
+     statusBadge = '<span style="color:#34d399; font-weight:600;">Out for Delivery</span>';
+  } else if (agent.current_status === 'idle') {
+     statusBadge = '<span style="color:#818cf8; font-weight:600;">Idle / Available</span>';
+  } else {
+     statusBadge = '<span style="color:#f87171; font-weight:600;">Inactive</span>';
+  }
+  document.getElementById('track-agent-status').innerHTML = statusBadge;
+  
+  document.getElementById('tracker-modal').classList.add('open');
+  
+  setTimeout(function() {
+    initTrackerMap(agent);
+  }, 100);
+}
+
+function closeAgentTracker() {
+  document.getElementById('tracker-modal').classList.remove('open');
+  if (trackingInterval) {
+    clearInterval(trackingInterval);
+    trackingInterval = null;
+  }
+}
+
+function initTrackerMap(agent) {
+  if (trackingMap) {
+    trackingMap.remove();
+    trackingMap = null;
+  }
+  if (trackingInterval) {
+    clearInterval(trackingInterval);
+    trackingInterval = null;
+  }
+  
+  var agency = agenciesCache.find(function(ag) { return ag.agency_id === agent.agency_id; });
+  var agencyLat = agency && agency.latitude ? parseFloat(agency.latitude) : 12.9716;
+  var agencyLng = agency && agency.longitude ? parseFloat(agency.longitude) : 77.5946;
+  
+  trackingMap = L.map('agent-leaflet-map').setView([agencyLat, agencyLng], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(trackingMap);
+  
+  var agencyIcon = L.divIcon({
+    html: '<div style="font-size:24px;">🏢</div>',
+    className: 'custom-div-icon',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+  
+  var bicycleIcon = L.divIcon({
+    html: '<div style="font-size:24px; filter:drop-shadow(0 0 4px #10b981);">🚴</div>',
+    className: 'custom-div-icon',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+
+  var homeIcon = L.divIcon({
+    html: '<div style="font-size:24px;">🏠</div>',
+    className: 'custom-div-icon',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+  
+  L.marker([agencyLat, agencyLng], {icon: agencyIcon})
+    .addTo(trackingMap)
+    .bindPopup('<b>' + (agent.agency_name || 'Agency Base') + '</b><br/>Agency Home Base')
+    .openPopup();
+    
+  if (agent.current_status === 'active_delivery') {
+    var destLat = agencyLat + 0.008;
+    var destLng = agencyLng + 0.008;
+    
+    destinationMarker = L.marker([destLat, destLng], {icon: homeIcon})
+      .addTo(trackingMap)
+      .bindPopup('<b>Customer Destination</b>');
+      
+    routeLine = L.polyline([[agencyLat, agencyLng], [destLat, destLng]], {
+      color: '#10b981', 
+      weight: 4, 
+      opacity: 0.7, 
+      dashArray: '8, 8'
+    }).addTo(trackingMap);
+    
+    agentMarker = L.marker([agencyLat, agencyLng], {icon: bicycleIcon}).addTo(trackingMap);
+    
+    var startTime = Date.now();
+    var duration = 15000;
+    
+    trackingInterval = setInterval(function() {
+      var elapsed = (Date.now() - startTime) % duration;
+      var progress = elapsed / duration;
+      
+      var curLat = agencyLat + (destLat - agencyLat) * progress;
+      var curLng = agencyLng + (destLng - agencyLng) * progress;
+      var wiggle = 0.0003 * Math.sin(progress * Math.PI * 6);
+      
+      agentMarker.setLatLng([curLat + wiggle, curLng + wiggle]);
+    }, 100);
+  } else {
+    agentMarker = L.marker([agencyLat, agencyLng], {icon: bicycleIcon}).addTo(trackingMap);
+  }
+}
+
 loadAgents();
 </script>
 </body>
