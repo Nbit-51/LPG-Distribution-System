@@ -44,6 +44,28 @@ if HAS_QR:
     app.include_router(qr_router)
 
 
+# ─── Security Headers & DB Session Middleware ───
+@app.middleware("http")
+async def security_and_db_session_middleware(request: Request, call_next):
+    from app.database import db_session
+    with db_session(autocommit=True):
+        response = await call_next(request)
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        csp_directives = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://unpkg.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com; "
+            "connect-src 'self' ws: wss:;"
+        )
+        response.headers["Content-Security-Policy"] = csp_directives
+        return response
+
+
 # ─── Health / Keep-alive (also warms DB on first hit after cold start) ───
 @app.get("/health")
 async def health():

@@ -123,6 +123,94 @@ def add_wallet_funds(consumer_id: int, amount: float, description: str) -> dict:
     )
     return get_wallet(consumer_id)
 
+
+def get_cylinder_status(consumer_id: int) -> dict:
+    lifespan_map = {"domestic": 30, "essential": 15, "commercial": 8}
+
+    # Get consumer type and auto_refill_enabled
+    consumer_rows = execute_query(
+        "SELECT consumer_type, auto_refill_enabled FROM consumers WHERE consumer_id = %s",
+        (consumer_id,)
+    )
+    if not consumer_rows:
+        return None
+    consumer = consumer_rows[0]
+    consumer_type = consumer["consumer_type"]
+    auto_refill_enabled = bool(consumer.get("auto_refill_enabled", False))
+    lifespan_days = lifespan_map.get(consumer_type, 30)
+
+    # Get latest delivered booking
+    booking_rows = execute_query(
+        """SELECT delivered_at, booking_date FROM bookings
+           WHERE consumer_id = %s AND delivery_status = 'delivered'
+           ORDER BY COALESCE(delivered_at, booking_date) DESC LIMIT 1""",
+        (consumer_id,)
+    )
+
+    if not booking_rows:
+        return {
+            "gas_percentage": 0.0,
+            "days_remaining": 0,
+            "lifespan_days": lifespan_days,
+            "last_delivery_date": None,
+            "auto_refill_enabled": auto_refill_enabled,
+            "consumer_type": consumer_type,
+        }
+
+    last_delivery = booking_rows[0]["delivered_at"] or booking_rows[0]["booking_date"]
+    if hasattr(last_delivery, "date"):
+        last_delivery = last_delivery.date()
+
+    days_used = (date.today() - last_delivery).days
+    days_remaining = max(lifespan_days - days_used, 0)
+    gas_percentage = round((days_remaining / lifespan_days) * 100, 1)
+
+    return {
+        "gas_percentage": gas_percentage,
+        "days_remaining": days_remaining,
+        "lifespan_days": lifespan_days,
+        "last_delivery_date": last_delivery.isoformat(),
+        "auto_refill_enabled": auto_refill_enabled,
+        "consumer_type": consumer_type,
+    }
+
+
+def toggle_auto_refill(consumer_id: int, enabled: bool, agency_id: int) -> dict:
+    execute_query(
+        "UPDATE consumers SET auto_refill_enabled = %s WHERE consumer_id = %s",
+        (enabled, consumer_id),
+        fetch=False,
+    )
+
+    auto_booked = False
+    message = f"Auto-refill {'enabled' if enabled else 'disabled'} successfully."
+
+    if enabled:
+        status = get_cylinder_status(consumer_id)
+        if status and status["gas_percentage"] <= 15:
+            booking_id = execute_query(
+                """INSERT INTO bookings (consumer_id, agency_id, cylinders_requested, booking_date, status, delivery_tier, priority_delivery_fee)
+                   VALUES (%s, %s, 1, %s, 'pending', 'standard', 0.0)""",
+                (consumer_id, agency_id, date.today()),
+                fetch=False,
+            )
+            from app.invoices.service import create_invoice
+            create_invoice(
+                booking_id=booking_id,
+                consumer_id=consumer_id,
+                agency_id=agency_id,
+                cylinders=1,
+                payment_method="COD"
+            )
+            auto_booked = True
+            message = "Auto-refill enabled. Gas level is low — a refill booking has been auto-created."
+
+    return {
+        "auto_refill_enabled": enabled,
+        "message": message,
+        "auto_booked": auto_booked,
+    }
+
 def deduct_wallet_funds(consumer_id: int, amount: float, description: str):
     if amount <= 0:
         raise ValueError("Amount must be greater than zero.")

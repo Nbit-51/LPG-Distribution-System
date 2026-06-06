@@ -270,13 +270,3 @@ This system implements allocation policies aligned with:
 
 MIT
 
----
-
-## Contributors
-
-| Name | USN |
-|---|---|
-| | |
-| | |
-| | |
-| | |

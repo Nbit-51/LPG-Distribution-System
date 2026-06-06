@@ -281,11 +281,13 @@ async function loadDashboard() {
     var results = await Promise.all([
       api.get('/admin/overview'),
       api.get('/bookings/priority-queue').catch(function() { return {}; }),
-      api.get('/invoices/admin?page=1&page_size=5').catch(function() { return { results: [] }; })
+      api.get('/invoices/admin?page=1&page_size=5').catch(function() { return { results: [] }; }),
+      api.get('/admin/demand-forecast').catch(function() { return null; })
     ]);
     var overview = results[0];
     var queueData = results[1];
     var invoiceRes = results[2];
+    var forecastData = results[3];
     var s = overview.totals || {};
     var tc = s.consumers != null ? s.consumers : "--";
     var pb = (s.bookings && s.bookings.pending != null) ? s.bookings.pending : "--";
@@ -322,6 +324,39 @@ async function loadDashboard() {
       '<div class="stat-card ' + (sa > 0 ? 'red' : '') + '"><div class="stat-value">' + sa + '</div><div class="stat-label">Shortage Alerts</div></div>' +
       '<div class="stat-card"><div class="stat-value">' + tg + '</div><div class="stat-label">Active Agencies</div></div>' +
       '<div class="stat-card green"><div class="stat-value">' + dt + '</div><div class="stat-label">Delivered Today</div></div>';
+
+    // Populate AI forecaster UI
+    if (forecastData) {
+      var badge = document.getElementById('forecast-risk-badge');
+      if (badge) {
+        badge.textContent = (forecastData.shortage_risk + ' RISK').toUpperCase();
+        badge.className = 'badge';
+        if (forecastData.shortage_risk === 'High') {
+          badge.style.background = '#ef4444';
+          badge.style.color = '#ffffff';
+        } else if (forecastData.shortage_risk === 'Medium') {
+          badge.style.background = '#f59e0b';
+          badge.style.color = '#ffffff';
+        } else {
+          badge.style.background = '#22c55e';
+          badge.style.color = '#ffffff';
+        }
+      }
+      var recTitle = document.getElementById('forecast-recommendation-title');
+      if (recTitle) recTitle.textContent = forecastData.recommendation_title;
+      var recDesc = document.getElementById('forecast-recommendation-desc');
+      if (recDesc) recDesc.textContent = forecastData.recommendation_desc;
+
+      var daysList = document.getElementById('forecast-days-list');
+      if (daysList && forecastData.forecast) {
+        daysList.innerHTML = forecastData.forecast.map(function(f) {
+          return '<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">' +
+                 '  <span style="font-size:13px; font-weight:600; color:#cbd5e1;">' + f.day + ' (' + f.date + ')</span>' +
+                 '  <span style="font-size:13px; font-weight:700; color:#38bdf8;">' + f.predicted_qty + ' cyls</span>' +
+                 '</div>';
+        }).join('');
+      }
+    }
 
     var queue = queueData.queue || queueData.results || [];
     if (queue.length) {

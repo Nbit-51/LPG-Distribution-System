@@ -61,6 +61,9 @@ class KYCUpdate(BaseModel):
 class WalletAddFunds(BaseModel):
     amount: float
 
+class AutoRefillToggle(BaseModel):
+    enabled: bool
+
 class WalletVerifyPayment(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str

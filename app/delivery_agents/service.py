@@ -15,13 +15,15 @@ def get_agent_by_phone(phone: str) -> dict | None:
     )
     return rows[0] if rows else None
 
-def authenticate_agent(phone: str, password: str) -> dict:
+def authenticate_agent(phone: str, password: str, ip: str = None) -> dict:
     from fastapi import HTTPException, status
+    from app.auth.service import check_brute_force_lockout, log_failed_login, clear_failed_logins
+    check_brute_force_lockout(phone, ip)
     agent = get_agent_by_phone(phone)
-    if not agent:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Delivery agent phone number not registered.")
-    if not agent.get("password_hash") or not verify_password(password, agent["password_hash"]):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect password.")
+    if not agent or not agent.get("password_hash") or not verify_password(password, agent["password_hash"]):
+        log_failed_login(phone, ip)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect phone number or password.")
+    clear_failed_logins(phone, ip)
     return agent
 
 def create_delivery_agent(full_name: str, phone: str, agency_id: int, password: str) -> dict:

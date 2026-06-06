@@ -5,7 +5,8 @@ from typing import Optional, List
 from app.consumers.schemas import (
     ConsumerCreate, ConsumerUpdate,
     ConsumerResponse, ConsumerListResponse, MessageResponse,
-    ConsumerType, KYCSubmit, WalletAddFunds, WalletVerifyPayment
+    ConsumerType, KYCSubmit, WalletAddFunds, WalletVerifyPayment,
+    AutoRefillToggle
 )
 from app.consumers import service
 from app.auth.service import get_current_consumer
@@ -49,6 +50,27 @@ def submit_consumer_kyc(body: KYCSubmit, current_consumer=Depends(get_current_co
     try:
         record = service.submit_kyc(current_consumer["consumer_id"], body.doc_type, body.doc_num)
         return record
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+@router.get("/cylinder-status")
+def get_cylinder_status(current_consumer=Depends(get_current_consumer)):
+    try:
+        status = service.get_cylinder_status(current_consumer["consumer_id"])
+        if not status:
+            raise HTTPException(status_code=404, detail="Consumer not found.")
+        return status
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+@router.post("/auto-refill/toggle")
+def toggle_auto_refill(body: AutoRefillToggle, current_consumer=Depends(get_current_consumer)):
+    try:
+        return service.toggle_auto_refill(
+            current_consumer["consumer_id"],
+            body.enabled,
+            current_consumer["agency_id"]
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 

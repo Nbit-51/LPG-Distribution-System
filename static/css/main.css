@@ -39,6 +39,17 @@
     #22d3ee
   );
   
+  --kerosene-rainbow: linear-gradient(
+    135deg,
+    #ff007f,
+    #7f00ff,
+    #00f0ff,
+    #00ff7f,
+    #ffea00,
+    #ff5e00,
+    #ff007f
+  );
+  
   --text-main: #f1f5f9;
   --text-muted: #64748b;
   --text-dark: #94a3b8;
@@ -284,50 +295,61 @@ body {
   justify-content: center;
   gap: 8px;
   padding: 10px 20px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   text-decoration: none;
   font-family: inherit;
   position: relative;
   isolation: isolate;
   overflow: visible;
-  background:
-    linear-gradient(135deg, var(--btn-fill), var(--btn-fill)) padding-box,
-    var(--argon-ring) border-box;
+  color: var(--text-main);
+  background: rgba(13, 20, 38, 0.6) padding-box;
+}
+
+.btn-neon::after, .btn-argon::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 3px; height: 100%;
+  border-radius: 8px 0 0 8px;
+}
+.btn-neon::after {
+  background: #ff5e00;
+  box-shadow: 0 0 8px #ff5e00;
+}
+.btn-argon::after {
+  background: #00d4ff;
+  box-shadow: 0 0 8px #00d4ff;
 }
 
 .btn::before {
   content: '';
   position: absolute;
-  inset: -4px;
+  inset: -1px;
   z-index: -1;
   border-radius: inherit;
-  background: var(--argon-ring);
-  filter: blur(14px) saturate(1.8);
-  opacity: var(--btn-glow-opacity);
-  transform: scale(0.96);
-  transition: opacity 0.25s ease, transform 0.25s ease, filter 0.25s ease;
-  pointer-events: none;
+  background: var(--kerosene-rainbow);
+  background-size: 400% 400%;
+  opacity: 0;
+  transition: opacity 0.35s ease;
 }
 
 .btn:hover {
-  --btn-glow-opacity: 0.78;
-  transform: translateY(-2px);
-  border-color: transparent;
-  background:
-    linear-gradient(135deg, rgba(5, 7, 15, 0.88), rgba(12, 18, 36, 0.78)) padding-box,
-    var(--argon-ring) border-box !important;
   color: #fff;
-  animation: argonPulse 1.8s ease-in-out infinite;
+  transform: translateY(-2.5px);
+  border-color: transparent;
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.45),
+    0 0 20px rgba(255, 0, 127, 0.22),
+    0 0 35px rgba(0, 240, 255, 0.18);
 }
 
 .btn:hover::before {
-  transform: scale(1.03);
-  animation: argonSpin 3.8s linear infinite;
+  opacity: 0.95;
+  animation: keroseneFlow 4s linear infinite;
 }
 
 .btn:focus-visible {
@@ -414,13 +436,10 @@ body {
   transform: translateY(1px);
 }
 
-@keyframes argonSpin {
-  to { transform: scale(1.03) rotate(360deg); }
-}
-
-@keyframes argonPulse {
-  0%, 100% { filter: saturate(1.05); }
-  50% { filter: saturate(1.45) brightness(1.08); }
+@keyframes keroseneFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

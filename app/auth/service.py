@@ -6,6 +6,9 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+import re
+import time
+from collections import defaultdict
 
 from app.database import execute_query
 from app.config import settings
@@ -17,6 +20,63 @@ TOKEN_EXPIRE_H = 12
 
 def hash_password(p): return pwd_context.hash(p)
 def verify_password(plain, hashed): return pwd_context.verify(plain, hashed)
+
+# Cybersecurity: Password Strength Checker
+def validate_password_strength(password: str) -> None:
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long.")
+    if not re.search(r"[A-Z]", password):
+        raise ValueError("Password must contain at least one uppercase letter.")
+    if not re.search(r"[a-z]", password):
+        raise ValueError("Password must contain at least one lowercase letter.")
+    if not re.search(r"\d", password):
+        raise ValueError("Password must contain at least one digit.")
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        raise ValueError("Password must contain at least one special character.")
+
+# Cybersecurity: Brute-Force lockout tracking
+FAILED_LOGINS = defaultdict(list)
+IP_FAILED_LOGINS = defaultdict(list)
+LOCKOUT_DURATION = 300  # 5 minutes
+MAX_FAILED_ATTEMPTS = 5
+
+def check_brute_force_lockout(username_or_phone: str, ip: str = None):
+    now = time.time()
+    
+    if username_or_phone:
+        attempts = FAILED_LOGINS[username_or_phone]
+        recent_attempts = [t for t in attempts if now - t < LOCKOUT_DURATION]
+        FAILED_LOGINS[username_or_phone] = recent_attempts
+        if len(recent_attempts) >= MAX_FAILED_ATTEMPTS:
+            remaining = int(LOCKOUT_DURATION - (now - recent_attempts[0]))
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed login attempts. Account temporarily locked. Please try again in {remaining} seconds."
+            )
+            
+    if ip:
+        ip_attempts = IP_FAILED_LOGINS[ip]
+        recent_ip_attempts = [t for t in ip_attempts if now - t < LOCKOUT_DURATION]
+        IP_FAILED_LOGINS[ip] = recent_ip_attempts
+        if len(recent_ip_attempts) >= MAX_FAILED_ATTEMPTS:
+            remaining = int(LOCKOUT_DURATION - (now - recent_ip_attempts[0]))
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed login attempts from this IP. Locked out for {remaining} seconds."
+            )
+
+def log_failed_login(username_or_phone: str, ip: str = None):
+    now = time.time()
+    if username_or_phone:
+        FAILED_LOGINS[username_or_phone].append(now)
+    if ip:
+        IP_FAILED_LOGINS[ip].append(now)
+
+def clear_failed_logins(username_or_phone: str, ip: str = None):
+    if username_or_phone in FAILED_LOGINS:
+        del FAILED_LOGINS[username_or_phone]
+    if ip in IP_FAILED_LOGINS:
+        del IP_FAILED_LOGINS[ip]
 
 def create_access_token(data: dict) -> str:
     payload = data.copy()
@@ -32,10 +92,13 @@ def get_admin_by_id(admin_id):
     rows = execute_query("SELECT * FROM admins WHERE admin_id=%s AND is_active=TRUE", (admin_id,))
     return rows[0] if rows else None
 
-def authenticate_admin(username, password):
+def authenticate_admin(username, password, ip: str = None):
+    check_brute_force_lockout(username, ip)
     admin = get_admin_by_username(username)
     if not admin or not verify_password(password, admin["password_hash"]):
+        log_failed_login(username, ip)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid username or password.")
+    clear_failed_logins(username, ip)
     execute_query("UPDATE admins SET last_login=NOW() WHERE admin_id=%s", (admin["admin_id"],), fetch=False)
     return admin
 
@@ -108,14 +171,18 @@ def register_consumer_account(full_name, phone, address, password, consumer_type
     )
     return get_consumer_by_id_auth(consumer_id)
 
-def authenticate_consumer(phone_or_email, password):
+def authenticate_consumer(phone_or_email, password, ip: str = None):
+    check_brute_force_lockout(phone_or_email, ip)
     consumer = get_consumer_by_phone_or_email_auth(phone_or_email)
     if not consumer:
+        log_failed_login(phone_or_email, ip)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Phone number or email not registered.")
     if not consumer.get("password_hash") or not verify_password(password, consumer["password_hash"]):
+        log_failed_login(phone_or_email, ip)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect password.")
     if not consumer["is_active"]:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Account is deactivated.")
+    clear_failed_logins(phone_or_email, ip)
     return consumer
 
 def create_consumer_token(consumer_id):

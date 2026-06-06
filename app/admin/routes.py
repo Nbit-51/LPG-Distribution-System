@@ -224,4 +224,76 @@ def admin_update_kyc(consumer_id: int, body: KYCUpdate, _=Depends(get_current_ad
             raise HTTPException(404, "Consumer not found.")
         return record
     except Exception as e:
-        raise HTTPException(500, f"Database error: {e}")
+        raise HTTPException(500, f"Database error: {e}")
+
+@router.get("/demand-forecast")
+def demand_forecast(_=Depends(get_current_admin)):
+    """
+    Predict demand for the next 7 days based on recent booking trends and give crisis warnings/recommendations.
+    """
+    import datetime
+    from app.database import execute_query
+    
+    # Get recent daily demand velocity (sum of cylinders requested per day for last 14 days)
+    history = execute_query(
+        """SELECT booking_date, SUM(cylinders_requested) AS qty
+           FROM bookings
+           WHERE booking_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+             AND status != 'cancelled'
+           GROUP BY booking_date
+           ORDER BY booking_date ASC"""
+    )
+    
+    # Calculate average daily velocity
+    if history:
+        avg_daily = sum(float(h["qty"]) for h in history) / len(history)
+    else:
+        # Fallback default if no history is present (e.g. fresh database)
+        avg_daily = 8.5
+        
+    # Get total available stock across all agencies
+    stock_rows = execute_query("SELECT SUM(available_cylinders) AS total FROM vw_agency_stock")
+    available_stock = float(stock_rows[0]["total"]) if stock_rows and stock_rows[0]["total"] is not None else 0.0
+    
+    # Generate 7-day forecast
+    forecast = []
+    total_projected_demand = 0.0
+    today = datetime.date.today()
+    for i in range(1, 8):
+        future_date = today + datetime.timedelta(days=i)
+        # Add a small organic fluctuation (e.g. Mon/Fri are slightly busier)
+        day_factor = 1.2 if future_date.weekday() in (0, 4) else 0.9
+        predicted_qty = round(avg_daily * day_factor, 1)
+        forecast.append({
+            "date": future_date.strftime("%Y-%m-%d"),
+            "day": future_date.strftime("%a"),
+            "predicted_qty": predicted_qty
+        })
+        total_projected_demand += predicted_qty
+        
+    # Determine risk and recommendation
+    shortage_risk = "Low"
+    recommendation_title = "Supply Velocity Healthy"
+    recommendation_desc = "Available cylinders are sufficient to meet projected 7-day demand."
+    action_required = False
+    
+    if available_stock < total_projected_demand:
+        shortage_risk = "High"
+        recommendation_title = "CRITICAL: Stockout Imminent"
+        recommendation_desc = f"Projected 7-day demand ({total_projected_demand:.1f} cylinders) exceeds total available stock ({available_stock:.1f}). Recommend activating crisis mode immediately to cap commercial usage."
+        action_required = True
+    elif available_stock < total_projected_demand * 1.5:
+        shortage_risk = "Medium"
+        recommendation_title = "Warning: Moderate Shortage Risk"
+        recommendation_desc = f"Available stock ({available_stock:.1f}) offers thin headroom over projected 7-day demand ({total_projected_demand:.1f}). Monitor stock levels or prepare to activate crisis caps."
+        action_required = True
+        
+    return {
+        "forecast": forecast,
+        "total_projected_demand": round(total_projected_demand, 1),
+        "available_stock": available_stock,
+        "shortage_risk": shortage_risk,
+        "recommendation_title": recommendation_title,
+        "recommendation_desc": recommendation_desc,
+        "action_required": action_required
+    }
